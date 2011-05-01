@@ -1,3 +1,20 @@
+/**
+ * Copyright 2011 Chris Moos <chris at tech9computers dot com>
+ * 
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and 
+ * limitations under the License.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -22,30 +39,6 @@ void startTiming();
 uint64_t endTiming();
 
 int main(int argc, char **argv) {
-    /* Get the timebase info */
-    mach_timebase_info_data_t info;
-    mach_timebase_info(&info);
-
-    uint64_t start = mach_absolute_time();
-    
-    //hash_ring_node_t *n = hash_ring_find_node(ring, (uint8_t*)keySearch, strlen(keySearch));
-    
-    
-    uint64_t duration = mach_absolute_time() - start;
-
-    /* Convert to nanoseconds */
-    duration *= info.numer;
-    duration /= info.denom;
-    
-    /* Log the time */
-    /*printf("My amazing code took %lld microseconds!", duration / 1000);
-    assert(n != NULL);
-    
-    printf("Cleaning up hash ring..\n");
-    hash_ring_free(ring);
-    
-    printf("Running tests...\n");*/
-    
     testAddMultipleTimes();
     testRemoveNode();
     testRingSorted();
@@ -117,7 +110,7 @@ void generateKeys(uint8_t *keys, int numKeys, int keySize) {
 
 void runBench(int numReplicas, int numNodes, int numKeys, int keySize) {
     printf("----------------------------------------------------\n");
-    printf("bench: replicas = %d, nodes = %d, keys: %d\n", numReplicas, numNodes, numKeys);
+    printf("bench: replicas = %d, nodes = %d, keys: %d, ring size: %d\n", numReplicas, numNodes, numKeys, numReplicas * numNodes);
     printf("----------------------------------------------------\n");
     hash_ring_t *ring = hash_ring_create(numReplicas);
     
@@ -128,20 +121,32 @@ void runBench(int numReplicas, int numNodes, int numKeys, int keySize) {
     
     printf("running...\r");
     
-    int x;
-    startTiming();
-    for(x = 0; x < numKeys; x++) {
-        hash_ring_get_node(ring, &keys[x], keySize);
+    uint64_t min = 0;
+    uint64_t max = 0;
+    uint64_t total = 0;
+    int times = 100;
+    
+    int x, y;
+    for(y = 0; y < times; y++) {
+        startTiming();
+        for(x = 0; x < numKeys; x++) {
+            assert(hash_ring_find_node(ring, &keys[x], keySize) != NULL);
+            
+        }
+        uint64_t result = endTiming();
+        if(result > max) max = result;
+        if(min == 0 || result < min) min = result;
+        total += result;
     }
-    uint64_t result = endTiming();
-    printf("stats: total = %.5fs, avg/lookup: %.5fus, ops/sec: %.0f\n", 
-        (double)result / 1000000000,
-        ((double)(result / numKeys)) / 1000,
-        1000000000 / ((double)(result / numKeys)));
     
+    printf("stats: total = %.5fs, avg/lookup: %.5fus, min: %.5fus, max: %.5fus, ops/sec: %.0f\n", 
+        (double)total / 1000000000,
+        (((double)(total / numKeys)) / 1000) / times,
+        (double)min / numKeys / 1000,
+        (double)max / numKeys / 1000,
+        1000000000 / ((double)(total / (numKeys * times))));
     
-    //hash_ring_print(ring);
-    
+    free(keys);
     hash_ring_free(ring);
 }
 
@@ -156,17 +161,17 @@ void runBenchmark() {
     runBench(8, 512, 1000, 16);
     runBench(512, 8, 1000, 16);
     runBench(512, 16, 1000, 16);
-    runBench(512, 32, 1000, 16);
+    runBench(512, 32, 100000, 16);
+    runBench(512, 128, 10000, 16);
+    runBench(16, 1024, 1000, 16);
 }
 
-void testRingSorted() {
-    printf("Test that the ring is sorted...\n");
-    hash_ring_t *ring = hash_ring_create(64);
+void testRingSorting(int num) {
+    printf("Test that the ring is sorted [%d item(s)]...\n", num);
+    hash_ring_t *ring = hash_ring_create(num);
     char *slotA = "slotA";
-    char *slotB = "slotB";
     
     assert(hash_ring_add_node(ring, (uint8_t*)slotA, strlen(slotA)) == HASH_RING_OK);
-    assert(hash_ring_add_node(ring, (uint8_t*)slotB, strlen(slotB)) == HASH_RING_OK);
     
     int x;
     uint64_t cur = 0;
@@ -174,6 +179,21 @@ void testRingSorted() {
         assert(ring->items[x]->number > cur);
         cur = ring->items[x]->number;
     }
+    
+    hash_ring_free(ring);
+}
+
+void testRingSorted() {
+    testRingSorting(1);
+    testRingSorting(2);
+    testRingSorting(3);
+    testRingSorting(5);
+    testRingSorting(64);
+    testRingSorting(256);
+    testRingSorting(1024);
+    testRingSorting(10000);
+    testRingSorting(100000);
+    testRingSorting(1000000);
 }
 
 void testEmptyRingItemSearchReturnsNull() {
@@ -210,13 +230,13 @@ void testKnownSlotsOnRing() {
     assert(hash_ring_add_node(ring, (uint8_t*)slotB, strlen(slotB)) == HASH_RING_OK);
     
     node = hash_ring_find_node(ring, (uint8_t*)keyA, strlen(keyA));
-    assert(node != NULL && node->keyLen == strlen(slotA) && memcmp(node->key, slotA, strlen(slotA)) == 0);
+    assert(node != NULL && node->nameLen == strlen(slotA) && memcmp(node->name, slotA, strlen(slotA)) == 0);
     
     node = hash_ring_find_node(ring, (uint8_t*)keyB, strlen(keyB));
-    assert(node != NULL && node->keyLen == strlen(slotA) && memcmp(node->key, slotA, strlen(slotA)) == 0);
+    assert(node != NULL && node->nameLen == strlen(slotA) && memcmp(node->name, slotA, strlen(slotA)) == 0);
     
     node = hash_ring_find_node(ring, (uint8_t*)keyC, strlen(keyC));
-    assert(node != NULL && node->keyLen == strlen(slotB) && memcmp(node->key, slotB, strlen(slotB)) == 0);
+    assert(node != NULL && node->nameLen == strlen(slotB) && memcmp(node->name, slotB, strlen(slotB)) == 0);
 
     hash_ring_free(ring);
 }
@@ -248,19 +268,32 @@ void testKnownNextHighestItemOnRing() {
 void testRemoveNode() {
     printf("Test removing a node...\n");
     hash_ring_t *ring = hash_ring_create(1);
+    hash_ring_node_t *node;
     char *mynode = "mynode";
     char *mynode1 = "mynode1";
     char *mynode2 = "mynode2";
+    char *mykey = "mykey";
+    
     
     assert(hash_ring_add_node(ring, (uint8_t*)mynode, strlen(mynode)) == HASH_RING_OK);
     assert(hash_ring_add_node(ring, (uint8_t*)mynode1, strlen(mynode2)) == HASH_RING_OK);
     assert(hash_ring_add_node(ring, (uint8_t*)mynode2, strlen(mynode2)) == HASH_RING_OK);
     assert(ring->numNodes == 3);
     
+    node = hash_ring_find_node(ring, (uint8_t*)mykey, strlen(mykey));
+    assert(node != NULL && node->nameLen == strlen(mynode) && memcmp(mynode, node->name, node->nameLen) == 0);
+    
     assert(hash_ring_remove_node(ring, (uint8_t*)mynode, strlen(mynode)) == HASH_RING_OK);
     assert(ring->numNodes == 2);
     
     assert(hash_ring_get_node(ring, (uint8_t*)mynode, strlen(mynode)) == NULL);
+    
+    // remove node1, and try to search for a key that went to it before, and verify it goes to node2
+    assert(hash_ring_remove_node(ring, (uint8_t*)mynode1, strlen(mynode1)) == HASH_RING_OK);
+    assert(ring->numNodes == 1);
+    
+    node = hash_ring_find_node(ring, (uint8_t*)mykey, strlen(mykey));
+    assert(node != NULL && node->nameLen == strlen(mynode2) && memcmp(mynode2, node->name, node->nameLen) == 0);
     
     hash_ring_free(ring);
 }

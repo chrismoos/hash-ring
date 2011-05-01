@@ -1,3 +1,20 @@
+/**
+ * Copyright 2011 Chris Moos <chris at tech9computers dot com>
+ * 
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and 
+ * limitations under the License.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -5,7 +22,9 @@
 
 #include "sha1.h"
 #include "hash_ring.h"
-#include "bubble_sort.h"
+#include "sort.h"
+
+static int item_sort(void *a, void *b);
 
 hash_ring_t *hash_ring_create(uint32_t numReplicas) {
     hash_ring_t *ring = NULL;
@@ -30,7 +49,8 @@ void hash_ring_free(hash_ring_t *ring) {
     // Clean up the nodes
     ll_t *tmp, *cur = ring->nodes;
     while(cur != NULL) {
-        free(((hash_ring_node_t*)cur->data)->key);
+        free(((hash_ring_node_t*)cur->data)->name);
+        free(cur->data);
         tmp = cur;
         cur = tmp->next;
         free(tmp);
@@ -42,7 +62,7 @@ void hash_ring_free(hash_ring_t *ring) {
     for(x = 0; x < ring->numItems; x++) {
         free(ring->items[x]);
     }
-    free(ring->items);
+    if(ring->items != NULL) free(ring->items);
     
     free(ring);
 }
@@ -63,8 +83,8 @@ void hash_ring_print(hash_ring_t *ring) {
         
         hash_ring_node_t *node = (hash_ring_node_t*)cur->data;
         
-        for(y = 0; y < node->keyLen; y++) {
-            printf("%c", node->key[y]);
+        for(y = 0; y < node->nameLen; y++) {
+            printf("%c", node->name[y]);
         }
         printf("\n");
         cur = cur->next;
@@ -76,8 +96,8 @@ void hash_ring_print(hash_ring_t *ring) {
     for(x = 0; x < ring->numItems; x++) {
         hash_ring_item_t *item = ring->items[x];
         printf("%" PRIu64 " : ", item->number);
-        for(y = 0; y < item->node->keyLen; y++) {
-            printf("%c", item->node->key[y]);
+        for(y = 0; y < item->node->nameLen; y++) {
+            printf("%c", item->node->name[y]);
         }
         printf("\n");
     }
@@ -92,11 +112,6 @@ int hash_ring_add_items(hash_ring_t *ring, hash_ring_node_t *node) {
     SHA1Context sha1_ctx;
     char concat_buf[8];
     int concat_len;
-    
-    hash_ring_item_t *items = (hash_ring_item_t*)malloc(sizeof(hash_ring_item_t) * ring->numReplicas);
-    if(items == NULL) {
-        return HASH_RING_ERR;
-    }
 
     // Resize the items array
     void *resized = realloc(ring->items, (sizeof(hash_ring_item_t*) * ring->numNodes * ring->numReplicas));
@@ -108,13 +123,12 @@ int hash_ring_add_items(hash_ring_t *ring, hash_ring_node_t *node) {
     for(x = 0; x < ring->numReplicas; x++) {
         SHA1Reset(&sha1_ctx);
         
-        SHA1Input(&sha1_ctx, node->key, node->keyLen);
+        SHA1Input(&sha1_ctx, node->name, node->nameLen);
         
         concat_len = snprintf(concat_buf, sizeof(concat_buf), "%d", x);
         SHA1Input(&sha1_ctx, (uint8_t*)&concat_buf, concat_len);
         
         if(SHA1Result(&sha1_ctx) != 1) {
-            free(items);
             return HASH_RING_ERR;
         }
         hash_ring_item_t *item = (hash_ring_item_t*)malloc(sizeof(hash_ring_item_t));
@@ -132,6 +146,8 @@ int hash_ring_add_items(hash_ring_t *ring, hash_ring_node_t *node) {
 
 static int item_sort(void *a, void *b) {
     hash_ring_item_t *itemA = a, *itemB = b;
+    if(a == NULL) return 1;
+    if(b == NULL) return -1;
 
     if(itemA->number < itemB->number) {
         return -1;
@@ -144,27 +160,26 @@ static int item_sort(void *a, void *b) {
     }
 }
 
-// TODO - add locking for multithreaded use?
-int hash_ring_add_node(hash_ring_t *ring, uint8_t *key, uint32_t keyLen) {
-    if(hash_ring_get_node(ring, key, keyLen) != NULL) return HASH_RING_ERR;
-    if(key == NULL || keyLen <= 0) return HASH_RING_ERR;
+int hash_ring_add_node(hash_ring_t *ring, uint8_t *name, uint32_t nameLen) {
+    if(hash_ring_get_node(ring, name, nameLen) != NULL) return HASH_RING_ERR;
+    if(name == NULL || nameLen <= 0) return HASH_RING_ERR;
 
     hash_ring_node_t *node = (hash_ring_node_t*)malloc(sizeof(hash_ring_node_t));
     if(node == NULL) {
         return HASH_RING_ERR;
     }
     
-    node->key = (uint8_t*)malloc(keyLen);
-    if(node->key == NULL) {
+    node->name = (uint8_t*)malloc(nameLen);
+    if(node->name == NULL) {
         free(node);
         return HASH_RING_ERR;
     }
-    memcpy(node->key, key, keyLen);
-    node->keyLen = keyLen;
+    memcpy(node->name, name, nameLen);
+    node->nameLen = nameLen;
     
     ll_t *cur = (ll_t*)malloc(sizeof(ll_t));
     if(cur == NULL) {
-        free(node->key);
+        free(node->name);
         free(node);
         return HASH_RING_ERR;
     }
@@ -179,30 +194,30 @@ int hash_ring_add_node(hash_ring_t *ring, uint8_t *key, uint32_t keyLen) {
     
     // Add the items for this node
     if(hash_ring_add_items(ring, node) != HASH_RING_OK) {
-        hash_ring_remove_node(ring, node->key, node->keyLen);
+        hash_ring_remove_node(ring, node->name, node->nameLen);
         return HASH_RING_ERR;
     }
 
     // Sort the items
-    bubble_sort_array((void**)ring->items, ring->numItems, item_sort);
-    
+    quicksort((void**)ring->items, ring->numItems, item_sort);
+
     return HASH_RING_OK;
 }
 
-int hash_ring_remove_node(hash_ring_t *ring, uint8_t *key, uint32_t keyLen) {
-    if(ring == NULL || key == NULL || keyLen <= 0) return HASH_RING_ERR;
+int hash_ring_remove_node(hash_ring_t *ring, uint8_t *name, uint32_t nameLen) {
+    if(ring == NULL || name == NULL || nameLen <= 0) return HASH_RING_ERR;
 
     hash_ring_node_t *node;
     ll_t *next, *prev = NULL, *cur = ring->nodes;
     
     while(cur != NULL) {
         node = (hash_ring_node_t*)cur->data;
-        if(node->keyLen == keyLen  &&
-            memcmp(node->key, key, keyLen) == 0) {
+        if(node->nameLen == nameLen  &&
+            memcmp(node->name, name, nameLen) == 0) {
                 
                 // Node found, remove it
                 next = cur->next;
-                free(node->key);
+                free(node->name);
                 
                 if(prev == NULL) {
                     ring->nodes = next;
@@ -210,6 +225,20 @@ int hash_ring_remove_node(hash_ring_t *ring, uint8_t *key, uint32_t keyLen) {
                 else {
                     prev->next = next;
                 }
+                
+                int x;
+                // Remove all items for this node and mark them as NULL
+                for(x = 0; x < ring->numItems; x++) {
+                    if(ring->items[x]->node == node) {
+                        free(ring->items[x]);
+                        ring->items[x] = NULL;
+                    }
+                }
+                
+                // By re-sorting, all the NULLs will be at the end of the array
+                // Then the numItems is reset and that memory is no longer used
+                quicksort((void**)ring->items, ring->numItems, item_sort);
+                ring->numItems -= ring->numReplicas;
                 
                 free(node);
                 free(cur);
@@ -226,15 +255,15 @@ int hash_ring_remove_node(hash_ring_t *ring, uint8_t *key, uint32_t keyLen) {
     return HASH_RING_ERR;
 }
 
-hash_ring_node_t *hash_ring_get_node(hash_ring_t *ring, uint8_t *key, uint32_t keyLen) {
-    if(ring == NULL || key == NULL || keyLen <= 0) return NULL;
+hash_ring_node_t *hash_ring_get_node(hash_ring_t *ring, uint8_t *name, uint32_t nameLen) {
+    if(ring == NULL || name == NULL || nameLen <= 0) return NULL;
     
     ll_t *cur = ring->nodes;
     while(cur != NULL) {
         hash_ring_node_t *node = (hash_ring_node_t*)cur->data;
-        // Check if the keyLen is the same as well as the key
-        if(node->keyLen == keyLen && 
-            memcmp(node->key, key, keyLen) == 0) {
+        // Check if the nameLen is the same as well as the name
+        if(node->nameLen == nameLen && 
+            memcmp(node->name, name, nameLen) == 0) {
                 return node;
         }
         cur = cur->next;

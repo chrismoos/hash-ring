@@ -1,12 +1,22 @@
 CC = gcc
-CFLAGS = -O2 -Wall
-OBJECTS = hash_ring_test.o hash_ring.o sha1.o bubble_sort.o
+CFLAGS = -O3 -Wall -fPIC
+LDFLAGS = 
+OBJECTS = build/hash_ring.o build/sha1.o build/sort.o
+TEST_OBJECTS = build/hash_ring_test.o
+SHARED_LIB = build/libhashring.so
 
-hash_ring_bench : $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) -o bin/hash_ring_bench
+lib: $(OBJECTS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o $(SHARED_LIB) -shared
+
+test : lib $(TEST_OBJECTS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(TEST_OBJECTS) -lhashring -L./build -o bin/hash_ring_test 
+	bin/hash_ring_test
+
+erl:
+	cd lib/erl && make
 	
-%.o : %.c
-	$(CC) $(CFLAGS) -c $<
+build/%.o : %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 	
 clean:
-	rm -rf $(OBJECTS)
+	rm -rf $(OBJECTS) $(TEST_OBJECTS) $(SHARED_LIB)
