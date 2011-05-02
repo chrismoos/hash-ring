@@ -31,6 +31,24 @@ It is helpful to know how a node is hashed onto the ring, especially if you want
   
 The high **64-bits** of the digest are used to retrieve the number.
 
+## Compiling 
+
+Compile the library with:
+
+    make
+    
+This will produce a shared library in **build/libhashring.so**.
+
+## Running the tests
+
+    make test
+    
+## Bindings
+
+### Erlang
+
+    make erl
+
 ## Example
 
 The following code is from the tests, which hashes some known keys and ensures that they are located on the ring properly.
