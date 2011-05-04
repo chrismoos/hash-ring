@@ -91,6 +91,9 @@ init(Drv) ->
     Port = open_port({spawn, Drv}, [binary]),
     loop(#state{port=Port,rings = dict:new()}).
     
+
+    
+    
 loop(#state{port=Port,rings=Rings} = State) ->
     receive
         {create_ring, Pid, {Ring, NumReplicas}} ->
@@ -109,7 +112,7 @@ loop(#state{port=Port,rings=Rings} = State) ->
                         {Port, {data, <<0:8>>}} ->
                             Pid ! ok,
                             State#state{rings = dict:erase(Ring, Rings)};
-                        _ ->
+                        {Port, {data, <<1:8>>}} ->
                             Pid ! {error, ring_not_found},
                             State
                     end;
@@ -126,7 +129,7 @@ loop(#state{port=Port,rings=Rings} = State) ->
                     receive
                         {Port, {data, <<0:8>>}} ->
                             Pid ! ok;
-                        _ ->
+                        {Port, {data, <<1:8>>}} ->
                             Pid ! {error, unknown_error}
                     end;
                 _ ->
@@ -141,7 +144,7 @@ loop(#state{port=Port,rings=Rings} = State) ->
                     receive
                         {Port, {data, <<0:8>>}} ->
                             Pid ! ok;
-                        _ ->
+                        {Port, {data, <<1:8>>}} ->
                             Pid ! {error, unknown_error}
                     end;
                 _ ->
@@ -154,14 +157,14 @@ loop(#state{port=Port,rings=Rings} = State) ->
                     KeySize = size(Key),
                     Port ! {self(), {command, <<5:8, Index:32, KeySize:32, Key/binary>>}},
                     receive
-                        {Port, {data, <<0:8>>}} ->
-                            Pid ! {error, not_found};
+                        {Port, {data, <<3:8>>}} ->
+                            Pid ! {error, invalid_ring};
+                        {Port, {data, <<2:8>>}} ->
+                            Pid ! {error, node_not_found};
                         {Port, {data, <<1:8>>}} ->
                             Pid ! {error, unknown_error};
                         {Port, {data, <<Node/binary>>}} ->
-                            Pid ! {ok, Node};
-                        _ ->
-                            Pid ! {error, unknown_error}
+                            Pid ! {ok, Node}
                     end;
                 _ ->
                     Pid ! {error, ring_not_found}
@@ -176,7 +179,6 @@ loop(#state{port=Port,rings=Rings} = State) ->
         {'EXIT', Port, Reason} ->
             error_logger:error_msg("hash_ring port exited: ~p~n", [Reason]);
         _ ->
-            io:format("port msg: ~n", []),
             loop(State)
     end.
 
