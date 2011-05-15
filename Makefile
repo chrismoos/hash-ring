@@ -16,6 +16,7 @@ bindings: erl
 
 erl:
 	cd lib/erl && make
+	cp lib/erl/ebin/* ebin/
 	
 build/%.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
