@@ -1,7 +1,7 @@
 OS := $(shell uname)
 
 ifeq ($(OS), Darwin)
-	LD_FLAGS := -shared -undefined suppress -flat_namespace
+	LD_FLAGS := -shared -undefined suppress -flat_namespace -m32
 else
 	LD_FLAGS := -shared -fPIC
 endif
