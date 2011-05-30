@@ -1,5 +1,5 @@
 /**
- * Copyright 2011 Chris Moos <chris at tech9computers dot com>
+ * Copyright 2011 LiveProfile
  * 
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
