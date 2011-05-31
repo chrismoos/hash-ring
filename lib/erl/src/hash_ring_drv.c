@@ -110,7 +110,7 @@ static void hash_ring_drv_output(ErlDrvData handle, char *buff, int bufflen)
         if(index != -1) {
             d->ring_usage[index] = 1;
             
-            d->rings[index] = hash_ring_create(numReplicas);
+            d->rings[index] = hash_ring_create(numReplicas, HASH_FUNCTION_SHA1);
             
             index = htonl(index);
             driver_output(d->port, (char*)&index, 4);

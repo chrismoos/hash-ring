@@ -23,12 +23,17 @@
 #define HASH_RING_OK 0
 #define HASH_RING_ERR 1
 
+#define HASH_FUNCTION_SHA1 1
+#define HASH_FUNCTION_MD5 2
+
 #define HASH_RING_DEBUG 1
 
 typedef struct ll_t {
     void *data;
     struct ll_t *next;
 } ll_t;
+
+typedef uint8_t HASH_FUNCTION;
 
 /**
  * All nodes in the ring must have a unique name.
@@ -73,6 +78,9 @@ typedef struct hash_ring_t {
     
     /* The number of items in the ring */
     uint32_t numItems;
+    
+    /* The hash function to use for this ring */
+    HASH_FUNCTION hash_fn;
 } hash_ring_t;
 
 /**
@@ -82,9 +90,12 @@ typedef struct hash_ring_t {
  * more evenly. Increasing numReplicas improves distribution, but also increases memory by
  * (numReplicas * N).
  *
+ * @param[in] numReplicas The number of replicas
+ * @param[in] hash_fn The hash function to use. HASH_FUNCTION_SHA1 or HASH_FUNCTION_MD5
+ *
  * @returns a new hash ring or NULL if it couldn't be created.
  */
-hash_ring_t *hash_ring_create(uint32_t numReplicas);
+hash_ring_t *hash_ring_create(uint32_t numReplicas, HASH_FUNCTION hash_fn);
 
 
 /**

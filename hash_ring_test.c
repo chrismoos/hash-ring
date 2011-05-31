@@ -108,11 +108,15 @@ void generateKeys(uint8_t *keys, int numKeys, int keySize) {
     printf("done\n");
 }
 
-void runBench(int numReplicas, int numNodes, int numKeys, int keySize) {
+void runBench(HASH_FUNCTION hash_fn, int numReplicas, int numNodes, int numKeys, int keySize) {
+    char *hash = NULL;
+    if(hash_fn == HASH_FUNCTION_MD5) hash = "MD5";
+    else if(hash_fn == HASH_FUNCTION_SHA1) hash = "SHA1";
+    
     printf("----------------------------------------------------\n");
-    printf("bench: replicas = %d, nodes = %d, keys: %d, ring size: %d\n", numReplicas, numNodes, numKeys, numReplicas * numNodes);
+    printf("bench (%s): replicas = %d, nodes = %d, keys: %d, ring size: %d\n", hash, numReplicas, numNodes, numKeys, numReplicas * numNodes);
     printf("----------------------------------------------------\n");
-    hash_ring_t *ring = hash_ring_create(numReplicas);
+    hash_ring_t *ring = hash_ring_create(numReplicas, hash_fn);
     
     addNodes(ring, numNodes);
     
@@ -130,8 +134,8 @@ void runBench(int numReplicas, int numNodes, int numKeys, int keySize) {
     for(y = 0; y < times; y++) {
         startTiming();
         for(x = 0; x < numKeys; x++) {
+            //assert(hash_ring_find_node(ring, keys + (keySize * x), keySize) != NULL);
             assert(hash_ring_find_node(ring, &keys[x], keySize) != NULL);
-            
         }
         uint64_t result = endTiming();
         if(result > max) max = result;
@@ -153,26 +157,42 @@ void runBench(int numReplicas, int numNodes, int numKeys, int keySize) {
 void runBenchmark() {
     printf("Starting benchmarks...\n");
     
-    runBench(1, 1, 1000, 16);
-    runBench(1, 8, 1000, 16);
-    runBench(1, 256, 1000, 16);
-    runBench(8, 1, 1000, 16);
-    runBench(8, 32, 1000, 16);
-    runBench(8, 512, 1000, 16);
-    runBench(512, 8, 1000, 16);
-    runBench(512, 16, 1000, 16);
-    runBench(512, 32, 100000, 16);
-    runBench(512, 128, 10000, 16);
-    runBench(16, 1024, 1000, 16);
+    HASH_FUNCTION hash_fn = HASH_FUNCTION_SHA1;
+    
+    runBench(hash_fn, 1, 1, 1000, 16);
+    runBench(hash_fn, 1, 8, 1000, 16);
+    runBench(hash_fn, 1, 256, 1000, 16);
+    runBench(hash_fn, 8, 1, 1000, 16);
+    runBench(hash_fn, 8, 32, 1000, 16);
+    runBench(hash_fn, 8, 512, 1000, 16);
+    runBench(hash_fn, 512, 8, 1000, 16);
+    runBench(hash_fn, 512, 16, 1000, 16);
+    runBench(hash_fn, 512, 32, 100000, 16);
+    runBench(hash_fn, 512, 128, 10000, 16);
+    runBench(hash_fn, 16, 1024, 1000, 16);
+    
+    hash_fn = HASH_FUNCTION_MD5;
+    
+    runBench(hash_fn, 1, 1, 1000, 16);
+    runBench(hash_fn, 1, 8, 1000, 16);
+    runBench(hash_fn, 1, 256, 1000, 16);
+    runBench(hash_fn, 8, 1, 1000, 16);
+    runBench(hash_fn, 8, 32, 1000, 16);
+    runBench(hash_fn, 8, 512, 1000, 16);
+    runBench(hash_fn, 512, 8, 1000, 16);
+    runBench(hash_fn, 512, 16, 1000, 16);
+    runBench(hash_fn, 512, 32, 100000, 16);
+    runBench(hash_fn, 512, 128, 10000, 16);
+    runBench(hash_fn, 16, 1024, 1000, 16);
 }
 
 void testRingSorting(int num) {
     printf("Test that the ring is sorted [%d item(s)]...\n", num);
-    hash_ring_t *ring = hash_ring_create(num);
+    hash_ring_t *ring = hash_ring_create(num, HASH_FUNCTION_SHA1);
     char *slotA = "slotA";
     
     assert(hash_ring_add_node(ring, (uint8_t*)slotA, strlen(slotA)) == HASH_RING_OK);
-    
+    //hash_ring_print(ring);
     int x;
     uint64_t cur = 0;
     for(x = 0; x < ring->numItems; x++) {
@@ -198,7 +218,7 @@ void testRingSorted() {
 
 void testEmptyRingItemSearchReturnsNull() {
     printf("Test empty ring search returns null item...\n");
-    hash_ring_t *ring = hash_ring_create(8);
+    hash_ring_t *ring = hash_ring_create(8, HASH_FUNCTION_SHA1);
     
     assert(hash_ring_find_next_highest_item(ring, 0) == NULL);
     
@@ -207,7 +227,7 @@ void testEmptyRingItemSearchReturnsNull() {
 
 void testEmptyRingSearchReturnsNull() {
     printf("Test empty ring search returns null node...\n");
-    hash_ring_t *ring = hash_ring_create(8);
+    hash_ring_t *ring = hash_ring_create(8, HASH_FUNCTION_SHA1);
     char *key = "key";
     assert(hash_ring_find_node(ring, (uint8_t*)key, strlen(key)) == NULL);
     
@@ -216,7 +236,7 @@ void testEmptyRingSearchReturnsNull() {
 
 void testKnownSlotsOnRing() {
     printf("Test getting known nodes on ring...\n");
-    hash_ring_t *ring = hash_ring_create(8);
+    hash_ring_t *ring = hash_ring_create(8, HASH_FUNCTION_SHA1);
     char *slotA = "slotA";
     char *slotB = "slotB";
     
@@ -243,7 +263,7 @@ void testKnownSlotsOnRing() {
 
 void testKnownNextHighestItemOnRing() {
     printf("Test getting next highest item on ring...\n");
-    hash_ring_t *ring = hash_ring_create(8);
+    hash_ring_t *ring = hash_ring_create(8, HASH_FUNCTION_SHA1);
     char *slotA = "slotA";
     char *slotB = "slotB";
     
@@ -267,7 +287,7 @@ void testKnownNextHighestItemOnRing() {
 
 void testRemoveNode() {
     printf("Test removing a node...\n");
-    hash_ring_t *ring = hash_ring_create(1);
+    hash_ring_t *ring = hash_ring_create(1, HASH_FUNCTION_SHA1);
     hash_ring_node_t *node;
     char *mynode = "mynode";
     char *mynode1 = "mynode1";
@@ -300,10 +320,11 @@ void testRemoveNode() {
 
 void testAddMultipleTimes() {
     printf("Test adding a node multiple times...\n");
-    hash_ring_t *ring = hash_ring_create(1);
+    hash_ring_t *ring = hash_ring_create(1, HASH_FUNCTION_SHA1);
+    assert(ring != NULL);
     char *mynode = "mynode";
-    
     hash_ring_add_node(ring, (uint8_t*)mynode, strlen(mynode));
+
     assert(ring->numNodes == 1);
     
     assert(hash_ring_add_node(ring, (uint8_t*)mynode, strlen(mynode)) == HASH_RING_ERR);

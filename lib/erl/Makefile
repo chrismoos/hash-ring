@@ -1,5 +1,7 @@
 OS := $(shell uname)
 
+CFLAGS := -O3 -Wall -fPIC
+
 ifeq ($(OS), Darwin)
 	LD_FLAGS := -shared -undefined suppress -flat_namespace -m32
 else
@@ -13,7 +15,7 @@ ebin:
 	mkdir -p ebin
 
 driver:
-	gcc -o ebin/hash_ring_drv.so src/hash_ring_drv.c ../../hash_ring.c ../../sha1.c ../../sort.c -I../../ -I/usr/local/lib/erlang/usr/include $(LD_FLAGS)
+	gcc $(CFLAGS) -o ebin/hash_ring_drv.so src/hash_ring_drv.c ../../hash_ring.c ../../sha1.c ../../sort.c ../../md5.c -I../../ -I/usr/local/lib/erlang/usr/include $(LD_FLAGS)
 	
 test: driver
 	erlc  -DTEST -o ebin src/hash_ring.erl

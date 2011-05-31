@@ -23,14 +23,18 @@
 #include "sha1.h"
 #include "hash_ring.h"
 #include "sort.h"
+#include "md5.h"
 
 static int item_sort(void *a, void *b);
 
-hash_ring_t *hash_ring_create(uint32_t numReplicas) {
+hash_ring_t *hash_ring_create(uint32_t numReplicas, HASH_FUNCTION hash_fn) {
     hash_ring_t *ring = NULL;
     
     // numReplicas must be greater than or equal to 1
     if(numReplicas <= 0) return NULL;
+    
+    // Make sure that the HASH_FUNCTION is supported
+    if(hash_fn != HASH_FUNCTION_MD5 && hash_fn != HASH_FUNCTION_SHA1) return NULL;
     
     ring = (hash_ring_t*)malloc(sizeof(hash_ring_t));
     
@@ -39,6 +43,7 @@ hash_ring_t *hash_ring_create(uint32_t numReplicas) {
     ring->items = NULL;
     ring->numNodes = 0;
     ring->numItems = 0;
+    ring->hash_fn = hash_fn;
     
     return ring;
 }
@@ -65,6 +70,48 @@ void hash_ring_free(hash_ring_t *ring) {
     if(ring->items != NULL) free(ring->items);
     
     free(ring);
+}
+
+static int hash_ring_hash(hash_ring_t *ring, uint8_t *data, uint8_t dataLen, uint64_t *hash) {
+    if(ring->hash_fn == HASH_FUNCTION_MD5) {
+        uint8_t digest[16];
+        md5_state_t state;
+        md5_init(&state);
+        
+        md5_append(&state, (md5_byte_t*)data, dataLen);
+        md5_finish(&state, (md5_byte_t*)&digest);
+
+        uint32_t low = (digest[11] << 24 | digest[10] << 16 | digest[9] << 8 | digest[8]);
+        uint32_t high = (digest[15] << 24 | digest[14] << 16 | digest[13] << 8 | digest[12]);
+        uint64_t keyInt;
+        
+        keyInt = high;
+        keyInt <<= 32;
+        keyInt &= 0xffffffff00000000LLU;
+        keyInt |= low;
+        
+        *hash = keyInt;
+        
+        return 0;
+    }
+    else if(ring->hash_fn == HASH_FUNCTION_SHA1) {
+        SHA1Context sha1_ctx;
+
+        SHA1Reset(&sha1_ctx);
+        SHA1Input(&sha1_ctx, data, dataLen);
+        if(SHA1Result(&sha1_ctx) != 1) {
+            return -1;
+        }
+        
+        uint64_t keyInt = sha1_ctx.Message_Digest[3];
+        keyInt <<= 32;
+        keyInt |= sha1_ctx.Message_Digest[4];
+        *hash = keyInt;
+        return 0;
+    }
+    else {
+        return -1;
+    }
 }
 
 void hash_ring_print(hash_ring_t *ring) {
@@ -109,9 +156,10 @@ void hash_ring_print(hash_ring_t *ring) {
 
 int hash_ring_add_items(hash_ring_t *ring, hash_ring_node_t *node) {
     int x;
-    SHA1Context sha1_ctx;
+ 
     char concat_buf[8];
     int concat_len;
+    uint64_t keyInt;
 
     // Resize the items array
     void *resized = realloc(ring->items, (sizeof(hash_ring_item_t*) * ring->numNodes * ring->numReplicas));
@@ -119,23 +167,20 @@ int hash_ring_add_items(hash_ring_t *ring, hash_ring_node_t *node) {
         return HASH_RING_ERR;
     }
     ring->items = (hash_ring_item_t**)resized;
-    
     for(x = 0; x < ring->numReplicas; x++) {
-        SHA1Reset(&sha1_ctx);
-        
-        SHA1Input(&sha1_ctx, node->name, node->nameLen);
-        
         concat_len = snprintf(concat_buf, sizeof(concat_buf), "%d", x);
-        SHA1Input(&sha1_ctx, (uint8_t*)&concat_buf, concat_len);
         
-        if(SHA1Result(&sha1_ctx) != 1) {
+        uint8_t *data = (uint8_t*)malloc(concat_len + node->nameLen);
+        memcpy(data, node->name, node->nameLen);
+        memcpy(data + node->nameLen, &concat_buf, concat_len);
+
+        if(hash_ring_hash(ring, data, concat_len + node->nameLen, &keyInt) == -1) {
             return HASH_RING_ERR;
         }
+        
         hash_ring_item_t *item = (hash_ring_item_t*)malloc(sizeof(hash_ring_item_t));
         item->node = node;
-        item->number = sha1_ctx.Message_Digest[3];
-        item->number <<= 32;
-        item->number |= sha1_ctx.Message_Digest[4];
+        item->number = keyInt;
         
         ring->items[(ring->numNodes - 1) * ring->numReplicas + x] = item;
     }
@@ -161,9 +206,9 @@ static int item_sort(void *a, void *b) {
 }
 
 int hash_ring_add_node(hash_ring_t *ring, uint8_t *name, uint32_t nameLen) {
+    if(ring == NULL) return HASH_RING_ERR;
     if(hash_ring_get_node(ring, name, nameLen) != NULL) return HASH_RING_ERR;
     if(name == NULL || nameLen <= 0) return HASH_RING_ERR;
-
     hash_ring_node_t *node = (hash_ring_node_t*)malloc(sizeof(hash_ring_node_t));
     if(node == NULL) {
         return HASH_RING_ERR;
@@ -184,7 +229,7 @@ int hash_ring_add_node(hash_ring_t *ring, uint8_t *name, uint32_t nameLen) {
         return HASH_RING_ERR;
     }
     cur->data = node;
-    
+
     // Add the node
     ll_t *tmp = ring->nodes;
     ring->nodes = cur;
@@ -310,18 +355,9 @@ hash_ring_item_t *hash_ring_find_next_highest_item(hash_ring_t *ring, uint64_t n
 hash_ring_node_t *hash_ring_find_node(hash_ring_t *ring, uint8_t *key, uint32_t keyLen) {
     if(ring == NULL || key == NULL || keyLen <= 0) return NULL;
     
-    SHA1Context sha1_ctx;
+    uint64_t keyInt;
     
-    SHA1Reset(&sha1_ctx);
-    SHA1Input(&sha1_ctx, key, keyLen);
-    if(SHA1Result(&sha1_ctx) != 1) {
-        return NULL;
-    }
-    
-    uint64_t keyInt = sha1_ctx.Message_Digest[3];
-    keyInt <<= 32;
-    keyInt |= sha1_ctx.Message_Digest[4];
-
+    if(hash_ring_hash(ring, key, keyLen, &keyInt) == -1) return NULL;
     hash_ring_item_t *item = hash_ring_find_next_highest_item(ring, keyInt);
     if(item == NULL) {
         return NULL;

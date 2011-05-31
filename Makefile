@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -O3 -Wall -fPIC
 LDFLAGS = 
-OBJECTS = build/hash_ring.o build/sha1.o build/sort.o
+OBJECTS = build/hash_ring.o build/sha1.o build/sort.o build/md5.o
 TEST_OBJECTS = build/hash_ring_test.o
 SHARED_LIB = build/libhashring.so
 
