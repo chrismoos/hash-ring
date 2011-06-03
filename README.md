@@ -22,9 +22,13 @@ limitations under the License.
 
 **hash_ring** exposes a simple API to create/remove rings, add/remove nodes, and locate the node for a key on the ring.
 
-A ring is created by using the *hash_ring_create()* function. There is one parameter, *numReplicas*, which determines how many times a node is placed on the ring. This parameter gives you flexibility on how consistent the ring is. Larger values will even out the node distribution on the ring. 128 is a sensible default for most users.
+A ring is created by using the *hash_ring_create()* function.
 
-    hash_ring_t *ring = hash_ring_create(128);
+*numReplicas*, which determines how many times a node is placed on the ring. This parameter gives you flexibility on how consistent the ring is. Larger values will even out the node distribution on the ring. 128 is a sensible default for most users.
+
+*hash_fn* is the hash function to use. Currently *HASH_FUNCTION_MD5* and *HASH_FUNCTION_SHA1* are supported. In tests MD5 is on average about 25% faster.
+
+    hash_ring_t *ring = hash_ring_create(128, HASH_FUNCTION_SHA1);
 
 Next you can add some nodes to the ring. For example, if you have a cluster of Redis servers, you might do the following:
 
@@ -69,7 +73,7 @@ This will produce a shared library in **build/libhashring.so**.
 
 The following code is from the tests, which hashes some known keys and ensures that they are located on the ring properly.
 
-    hash_ring_t *ring = hash_ring_create(8);
+    hash_ring_t *ring = hash_ring_create(8, HASH_FUNCTION_SHA1);
     char *slotA = "slotA";
     char *slotB = "slotB";
 

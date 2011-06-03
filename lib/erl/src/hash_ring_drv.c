@@ -131,28 +131,28 @@ static void hash_ring_drv_output(ErlDrvData handle, char *buff, int bufflen)
         }
     }
     else if(bufflen >= 9 && buff[0] == COMMAND_ADD_NODE) {
-        uint32_t index = readUint32(&buff[1]);
-        uint32_t nodeLen = readUint32(&buff[5]);
+        uint32_t index = readUint32((unsigned char*)&buff[1]);
+        uint32_t nodeLen = readUint32((unsigned char*)&buff[5]);
         if((bufflen - 9) == nodeLen && d->numRings > index && d->ring_usage[index] == 1) {
-            hash_ring_add_node(d->rings[index], &buff[9], nodeLen);
+            hash_ring_add_node(d->rings[index], (unsigned char*)&buff[9], nodeLen);
             res = RETURN_OK;
         }
     }
     else if(bufflen >= 9 && buff[0] == COMMAND_REMOVE_NODE) {
-        uint32_t index = readUint32(&buff[1]);
-        uint32_t nodeLen = readUint32(&buff[5]);
+        uint32_t index = readUint32((unsigned char*)&buff[1]);
+        uint32_t nodeLen = readUint32((unsigned char*)&buff[5]);
         if((bufflen - 9) == nodeLen && d->numRings > index && d->ring_usage[index] == 1) {
-            hash_ring_remove_node(d->rings[index], &buff[9], nodeLen);
+            hash_ring_remove_node(d->rings[index], (unsigned char*)&buff[9], nodeLen);
             res = RETURN_OK;
         }
     }
     else if(bufflen >= 9 && buff[0] == COMMAND_FIND_NODE) {
-        uint32_t index = readUint32(&buff[1]);
-        uint32_t keyLen = readUint32(&buff[5]);
+        uint32_t index = readUint32((unsigned char*)&buff[1]);
+        uint32_t keyLen = readUint32((unsigned char*)&buff[5]);
         if((bufflen - 9) == keyLen && d->numRings > index && d->ring_usage[index] == 1) {
-            hash_ring_node_t *node = hash_ring_find_node(d->rings[index], &buff[9], keyLen);
+            hash_ring_node_t *node = hash_ring_find_node(d->rings[index], (unsigned char*)&buff[9], keyLen);
             if(node != NULL) {
-                driver_output(d->port, node->name, node->nameLen);
+                driver_output(d->port, (char*)node->name, node->nameLen);
                 return;
             }
         }
