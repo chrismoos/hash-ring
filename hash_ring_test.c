@@ -134,8 +134,7 @@ void runBench(HASH_FUNCTION hash_fn, int numReplicas, int numNodes, int numKeys,
     for(y = 0; y < times; y++) {
         startTiming();
         for(x = 0; x < numKeys; x++) {
-            //assert(hash_ring_find_node(ring, keys + (keySize * x), keySize) != NULL);
-            assert(hash_ring_find_node(ring, &keys[x], keySize) != NULL);
+            assert(hash_ring_find_node(ring, keys + (keySize * x), keySize) != NULL);
         }
         uint64_t result = endTiming();
         if(result > max) max = result;
@@ -192,7 +191,6 @@ void testRingSorting(int num) {
     char *slotA = "slotA";
     
     assert(hash_ring_add_node(ring, (uint8_t*)slotA, strlen(slotA)) == HASH_RING_OK);
-    //hash_ring_print(ring);
     int x;
     uint64_t cur = 0;
     for(x = 0; x < ring->numItems; x++) {
