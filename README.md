@@ -97,6 +97,22 @@ The following code is from the tests, which hashes some known keys and ensures t
 
     hash_ring_free(ring);
 
+## Erlang example
+
+    hash_ring:start("ebin", "hash_ring_drv"),
+    Ring = "myring",
+    ?assert(create_ring(Ring, 8) == ok),
+    ?assert(add_node(Ring, <<"slotA">>) == ok),
+    ?assert(add_node(Ring, <<"slotB">>) == ok),
+
+    ?assert(find_node(Ring, <<"keyA">>) == {ok, <<"slotA">>}),
+    ?assert(find_node(Ring, <<"keyBBBB">>) == {ok, <<"slotA">>}),
+    ?assert(find_node(Ring, <<"keyB_">>) == {ok, <<"slotB">>}),
+
+    ?assert(remove_node(Ring, <<"slotA">>) == ok),
+    ?assert(find_node(Ring, <<"keyA">>) == {ok, <<"slotB">>}),
+    ?assert(find_node(Ring, <<"keyBBBB">>) == {ok, <<"slotB">>}).
+
 ## Benchmarks
 
 The following benchmark was done on a MacBook Pro with the following specs:
