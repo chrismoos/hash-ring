@@ -1,6 +1,6 @@
 # hash_ring
 
-This library provides a consistent hashing implementation that uses SHA-1. It is high performance and suitable for rings with a large number of items (replicas or nodes).
+This library provides a consistent hashing implementation that supports SHA-1 and MD5. It is high performance and suitable for rings with a large number of items (replicas or nodes).
 
 ## License (See LICENSE file for full license)
 
