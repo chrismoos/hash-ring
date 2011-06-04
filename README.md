@@ -1,6 +1,9 @@
 # hash_ring
 
-This library provides a consistent hashing implementation that supports SHA-1 and MD5. It is high performance and suitable for rings with a large number of items (replicas or nodes).
+This library provides a consistent hashing implementation that supports SHA-1 and MD5. It is high performance and suitable for rings with a large number of items (replicas or nodes). The following bindings are available:
+
+ * Erlang
+ * Java
 
 ## License (See LICENSE file for full license)
 
@@ -49,7 +52,7 @@ It is helpful to know how a node is hashed onto the ring, especially if you want
     redis01_0_int = SHA1("redis01" + "0") & 0x000000000000000000000000ffffffffffffffff
     redis01_1_int = SHA1("redis01" + "1") & 0x000000000000000000000000ffffffffffffffff
   
-The high **64-bits** of the digest are used to retrieve the number.
+The least significant **64-bits** of the digest are used to retrieve the integer.
 
 ## Compiling 
 
@@ -65,9 +68,9 @@ This will install the library to **/usr/local/lib/libhashring.so**. The header f
     
 ## Bindings
 
-### Erlang
+To build all the bindings just run:
 
-    make erl
+    make bindings
 
 ## Example
 
