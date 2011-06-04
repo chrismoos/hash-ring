@@ -3,7 +3,12 @@ CFLAGS = -O3 -Wall -fPIC
 LDFLAGS = 
 OBJECTS = build/hash_ring.o build/sha1.o build/sort.o build/md5.o
 TEST_OBJECTS = build/hash_ring_test.o
-SHARED_LIB = build/libhashring.so
+
+ifeq ($(OS), Darwin)
+	SHARED_LIB = build/libhashring.so
+else
+	SHARED_LIB = build/libhashring.dylib
+endif
 
 lib: $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o $(SHARED_LIB) -shared
@@ -25,5 +30,5 @@ clean:
 	rm -rf $(OBJECTS) $(TEST_OBJECTS) $(SHARED_LIB)
 	
 install: lib
-	cp -f build/libhashring.so /usr/local/lib/
+	cp -f $(SHARED_LIB) /usr/local/lib/
 	cp hash_ring.h /usr/local/include/
