@@ -53,11 +53,11 @@ The high **64-bits** of the digest are used to retrieve the number.
 
 ## Compiling 
 
-Compile the library with:
+Compile the library and install with:
 
-    make
+    sudo make install
     
-This will produce a shared library in **build/libhashring.so**.
+This will install the library to **/usr/local/lib/libhashring.so**. The header file *hash_ring.h* is copied  to **/usr/local/include/hash_ring.h**.
 
 ## Running the tests
 

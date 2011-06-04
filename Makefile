@@ -5,7 +5,7 @@ OBJECTS = build/hash_ring.o build/sha1.o build/sort.o build/md5.o
 TEST_OBJECTS = build/hash_ring_test.o
 SHARED_LIB = build/libhashring.so
 
-lib: bindings $(OBJECTS)
+lib: $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o $(SHARED_LIB) -shared
 
 test : lib $(TEST_OBJECTS)
@@ -23,3 +23,7 @@ build/%.o : %.c
 	
 clean:
 	rm -rf $(OBJECTS) $(TEST_OBJECTS) $(SHARED_LIB)
+	
+install: lib
+	cp -f build/libhashring.so /usr/local/lib/
+	cp hash_ring.h /usr/local/include/
