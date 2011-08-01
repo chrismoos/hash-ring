@@ -3,7 +3,14 @@ OS := $(shell uname)
 CFLAGS := -O3 -Wall -fPIC
 
 ifeq ($(OS), Darwin)
-	LD_FLAGS := -shared -undefined suppress -flat_namespace -m32
+	LD_FLAGS := -shared -undefined suppress -flat_namespace 
+  ERLWS:=$(shell erl -noshell -eval "io:format(\"~p\",[erlang:system_info(wordsize)])" -s erlang halt)
+
+  ifeq ($(ERLWS), 4)
+	  LD_FLAGS := $(LD_FLAGS) -m32
+  else
+  	LD_FLAGS := $(LD_FLAGS) -m64
+  endif
 else
 	LD_FLAGS := -shared -fPIC
 endif
