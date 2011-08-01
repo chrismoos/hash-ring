@@ -112,17 +112,17 @@ If you use *rebar* you can put the following in your *rebar.config* to use libha
 
     hash_ring:start_link(),
     Ring = "myring",
-    ?assert(create_ring(Ring, 8) == ok),
-    ?assert(add_node(Ring, <<"slotA">>) == ok),
-    ?assert(add_node(Ring, <<"slotB">>) == ok),
+    ?assert(hash_ring:create_ring(Ring, 8) == ok),
+    ?assert(hash_ring:add_node(Ring, <<"slotA">>) == ok),
+    ?assert(hash_ring:add_node(Ring, <<"slotB">>) == ok),
 
-    ?assert(find_node(Ring, <<"keyA">>) == {ok, <<"slotA">>}),
-    ?assert(find_node(Ring, <<"keyBBBB">>) == {ok, <<"slotA">>}),
-    ?assert(find_node(Ring, <<"keyB_">>) == {ok, <<"slotB">>}),
+    ?assert(hash_ring:find_node(Ring, <<"keyA">>) == {ok, <<"slotA">>}),
+    ?assert(hash_ring:find_node(Ring, <<"keyBBBB">>) == {ok, <<"slotA">>}),
+    ?assert(hash_ring:find_node(Ring, <<"keyB_">>) == {ok, <<"slotB">>}),
 
-    ?assert(remove_node(Ring, <<"slotA">>) == ok),
-    ?assert(find_node(Ring, <<"keyA">>) == {ok, <<"slotB">>}),
-    ?assert(find_node(Ring, <<"keyBBBB">>) == {ok, <<"slotB">>}).
+    ?assert(hash_ring:remove_node(Ring, <<"slotA">>) == ok),
+    ?assert(hash_ring:find_node(Ring, <<"keyA">>) == {ok, <<"slotB">>}),
+    ?assert(hash_ring:find_node(Ring, <<"keyBBBB">>) == {ok, <<"slotB">>}).
 
 ## Benchmarks
 
