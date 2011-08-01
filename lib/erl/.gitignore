@@ -1,2 +1,5 @@
 ebin/*.beam
 ebin/*.so
+priv
+.eunit
+c_src/*.o
