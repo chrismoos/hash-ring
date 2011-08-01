@@ -3,3 +3,5 @@ bin/
 build
 ebin
 priv
+c_src/*.o
+.eunit
