@@ -1,6 +1,7 @@
 -module(hash_ring).
 
 -export([
+    start/0,
     start/2,
     stop/0,
     init/1
@@ -17,6 +18,18 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Public API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%% @doc Starts the hash_ring driver
+start() ->
+  case code:priv_dir(hash_ring) of
+       {error, bad_name} ->
+         Path = filename:join([filename:dirname(code:which(hash_ring)),"..","priv"]);
+       Path ->
+         ok
+  end,
+  start(Path, "hash_ring_drv").
+
 
 %%
 %% @doc Starts the hash_ring driver.
@@ -195,7 +208,7 @@ setup_driver() ->
         undefined -> ok;
         _ -> stop()
     end,
-    hash_ring:start("ebin", "hash_ring_drv").
+    hash_ring:start().
 
 driver_starts_test() ->
     setup_driver(),

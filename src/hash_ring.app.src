@@ -1,0 +1,11 @@
+{application, hash_ring,
+ [
+  {description, "C-based hash ring library"},
+  {vsn, git},
+  {registered, [hash_ring]},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
