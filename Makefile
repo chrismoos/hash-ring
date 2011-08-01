@@ -21,7 +21,7 @@ test : lib $(TEST_OBJECTS)
 bindings: erl java
 
 erl:
-	rebar compile
+	./rebar compile
 	
 java:
 	cd lib/java && gradle jar
