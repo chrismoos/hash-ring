@@ -100,7 +100,15 @@ The following code is from the tests, which hashes some known keys and ensures t
 
     hash_ring_free(ring);
 
-## Erlang example
+## Erlang
+
+If you use *rebar* you can put the following in your *rebar.config* to use libhashring:
+	
+	{deps, [
+	 {hash_ring, ".*", {git, "https://github.com/chrismoos/hash-ring.git", "master"}}
+	]}.
+
+### Example
 
     hash_ring:start("ebin", "hash_ring_drv"),
     Ring = "myring",
