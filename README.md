@@ -110,7 +110,7 @@ If you use *rebar* you can put the following in your *rebar.config* to use libha
 
 ### Example
 
-    hash_ring:start("ebin", "hash_ring_drv"),
+    hash_ring:start_link(),
     Ring = "myring",
     ?assert(create_ring(Ring, 8) == ok),
     ?assert(add_node(Ring, <<"slotA">>) == ok),
