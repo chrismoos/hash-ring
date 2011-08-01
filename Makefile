@@ -21,8 +21,7 @@ test : lib $(TEST_OBJECTS)
 bindings: erl java
 
 erl:
-	cd lib/erl && make
-	cp lib/erl/ebin/* ebin/
+	rebar compile
 	
 java:
 	cd lib/java && gradle jar
