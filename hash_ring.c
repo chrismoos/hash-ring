@@ -81,6 +81,13 @@ static int hash_ring_hash(hash_ring_t *ring, uint8_t *data, uint8_t dataLen, uin
         md5_append(&state, (md5_byte_t*)data, dataLen);
         md5_finish(&state, (md5_byte_t*)&digest);
 
+#ifdef LIBMEMCACHED_COMPAT
+        uint32_t low = (digest[3] << 24 | digest[2] << 16 | digest[1] << 8 | digest[0]);
+        uint64_t keyInt;
+        keyInt = low;
+	*hash = keyInt;
+	return 0;
+#else
         uint32_t low = (digest[11] << 24 | digest[10] << 16 | digest[9] << 8 | digest[8]);
         uint32_t high = (digest[15] << 24 | digest[14] << 16 | digest[13] << 8 | digest[12]);
         uint64_t keyInt;
@@ -93,6 +100,7 @@ static int hash_ring_hash(hash_ring_t *ring, uint8_t *data, uint8_t dataLen, uin
         *hash = keyInt;
         
         return 0;
+#endif
     }
     else if(ring->hash_fn == HASH_FUNCTION_SHA1) {
         SHA1Context sha1_ctx;
@@ -168,8 +176,12 @@ int hash_ring_add_items(hash_ring_t *ring, hash_ring_node_t *node) {
     }
     ring->items = (hash_ring_item_t**)resized;
     for(x = 0; x < ring->numReplicas; x++) {
+#ifdef LIBMEMCACHED_COMPAT
+        concat_len = snprintf(concat_buf, sizeof(concat_buf), "-%d", x);
+#else
         concat_len = snprintf(concat_buf, sizeof(concat_buf), "%d", x);
-        
+#endif
+
         uint8_t *data = (uint8_t*)malloc(concat_len + node->nameLen);
         memcpy(data, node->name, node->nameLen);
         memcpy(data + node->nameLen, &concat_buf, concat_len);
