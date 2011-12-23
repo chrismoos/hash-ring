@@ -25,7 +25,10 @@ erl:
 	
 java:
 	cd lib/java && gradle jar
-	
+
+python:
+	cd lib/python && ./setup.py install
+
 build/%.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 	
