@@ -6,3 +6,4 @@ priv
 c_src/*.o
 .eunit
 *.swp
+lib/python
