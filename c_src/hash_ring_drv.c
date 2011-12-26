@@ -17,6 +17,7 @@
 #define COMMAND_ADD_NODE        0x03
 #define COMMAND_REMOVE_NODE     0x04
 #define COMMAND_FIND_NODE       0x05
+#define COMMAND_SET_MODE        0x06
 
 #define RETURN_OK 0x00
 #define RETURN_ERR 0x01
@@ -101,7 +102,7 @@ static void hash_ring_drv_output(ErlDrvData handle, char *buff, int bufflen)
     char res = RETURN_ERR;
     
     // Check the command
-    if(bufflen == 5 && buff[0] == COMMAND_CREATE_RING) {
+    if(bufflen == 6 && buff[0] == COMMAND_CREATE_RING) {
         uint32_t numReplicas;
         memcpy(&numReplicas, &buff[1], 4);
         numReplicas = ntohl(numReplicas);
@@ -110,7 +111,7 @@ static void hash_ring_drv_output(ErlDrvData handle, char *buff, int bufflen)
         if(index != -1) {
             d->ring_usage[index] = 1;
             
-            d->rings[index] = hash_ring_create(numReplicas, HASH_FUNCTION_SHA1);
+            d->rings[index] = hash_ring_create(numReplicas, buff[5]);
             
             index = htonl(index);
             driver_output(d->port, (char*)&index, 4);
@@ -154,6 +155,15 @@ static void hash_ring_drv_output(ErlDrvData handle, char *buff, int bufflen)
             if(node != NULL) {
                 driver_output(d->port, (char*)node->name, node->nameLen);
                 return;
+            }
+        }
+    }
+    else if(bufflen == 6 && buff[0] == COMMAND_SET_MODE) {
+        uint32_t index = readUint32((unsigned char*)&buff[1]);
+        uint8_t mode = (uint8_t)buff[5];
+        if(d->numRings > index && d->ring_usage[index] == 1) {
+            if(hash_ring_set_mode(d->rings[index], mode) == HASH_RING_OK) {
+               res = RETURN_OK;
             }
         }
     }

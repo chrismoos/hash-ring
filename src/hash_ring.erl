@@ -16,14 +16,18 @@
 %% API
 -export([
          create_ring/2,
+         create_ring/3,
          delete_ring/1,
          add_node/2,
          remove_node/2,
          find_node/2,
+         set_mode/2,
          stop/0
 ]).
 
 -define(SERVER, ?MODULE).
+
+-include("hash_ring.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Public API
@@ -57,8 +61,12 @@ start_link(Path, SharedLib) ->
 stop() ->
     (catch gen_server:call(?SERVER, stop)).
     
+create_ring(Ring, NumReplicas, HashFunction) when is_integer(NumReplicas), is_integer(HashFunction) ->
+    gen_server:call(?SERVER, {create_ring, {Ring, NumReplicas, HashFunction}}).
+
+%% Defaults to SHA1 for backwards compatibility.
 create_ring(Ring, NumReplicas) ->
-    gen_server:call(?SERVER, {create_ring, {Ring, NumReplicas}}).
+    gen_server:call(?SERVER, {create_ring, {Ring, NumReplicas, ?HASH_RING_FUNCTION_SHA1}}).
     
 delete_ring(Ring) ->
     gen_server:call(?SERVER, {delete_ring, Ring}).
@@ -80,6 +88,9 @@ find_node(Ring, Key) when is_list(Key) ->
 
 find_node(Ring, Key) when is_binary(Key) ->
     gen_server:call(?SERVER, {find_node, {Ring, Key}}).
+
+set_mode(Ring, Mode) when is_integer(Mode) ->
+    gen_server:call(?SERVER, {set_mode, {Ring, Mode}}).
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Internal functions
@@ -97,8 +108,8 @@ init(Drv) ->
 
     
     
-handle_call({create_ring, {Ring, NumReplicas}}, _From, #state{ port = Port, rings = Rings } = State) ->
-    Port ! {self(), {command, <<1:8, NumReplicas:32>>}},
+handle_call({create_ring, {Ring, NumReplicas, HashFunction}}, _From, #state{ port = Port, rings = Rings } = State) ->
+    Port ! {self(), {command, <<1:8, NumReplicas:32, HashFunction:8>>}},
     receive 
         {Port, {data, <<Index:32>>}} ->
             {reply, ok, 
@@ -165,6 +176,20 @@ handle_call({find_node, {Ring, Key}}, _From, #state{ port = Port, rings = Rings 
                     {reply, {ok, Node}, State}
             end;
         _ ->
+            {reply, {error, ring_not_found}, State}
+    end;
+
+handle_call({set_mode, {Ring, Mode}}, _From, #state{port = Port, rings = Rings} = State) ->
+    case dict:find(Ring, Rings) of
+        {ok, Index} ->
+            Port ! {self(), {command, <<6:8, Index:32, Mode:8>>}},
+            receive 
+                {Port, {data, <<0:8>>}} ->
+                    {reply, ok, State};
+                {Port, {data, <<1:8>>}} ->
+                    {reply, {error, cant_set_mode}, State}
+            end;
+        _ -> 
             {reply, {error, ring_not_found}, State}
     end;
 
@@ -258,5 +283,11 @@ remove_node_test() ->
     ?assert(remove_node(Ring, <<"slotA">>) == ok),
     ?assert(find_node(Ring, <<"keyA">>) == {ok, <<"slotB">>}),
     ?assert(find_node(Ring, <<"keyBBBB">>) == {ok, <<"slotB">>}).
+
+set_mode_libmemcached_test() ->
+    setup_driver(),
+    Ring = "myring",
+    ?assert(create_ring(Ring, 1, ?HASH_RING_FUNCTION_MD5) == ok),
+    ?assertEqual(ok, set_mode(Ring, ?HASH_RING_MODE_LIBMEMCACHED_COMPAT)).
 
 -endif.
