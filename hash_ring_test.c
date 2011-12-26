@@ -34,11 +34,13 @@ void testKnownNextHighestItemOnRing();
 void testKnownSlotsOnRing();
 void testRingSorted();
 void runBenchmark();
+void testLibmemcachedCompat();
 
 void startTiming();
 uint64_t endTiming();
 
 int main(int argc, char **argv) {
+    testLibmemcachedCompat();
     testAddMultipleTimes();
     testRemoveNode();
     testRingSorted();
@@ -328,5 +330,23 @@ void testAddMultipleTimes() {
     assert(hash_ring_add_node(ring, (uint8_t*)mynode, strlen(mynode)) == HASH_RING_ERR);
     assert(ring->numNodes == 1);
     
+    hash_ring_free(ring);
+}
+
+void testLibmemcachedCompat() {
+    printf("Testing libmemcached compatibility mode..\n");
+
+    // make sure the mode can't be set to libmemcached if the function is not md5
+    hash_ring_t *ring = hash_ring_create(1, HASH_FUNCTION_SHA1);
+    assert(hash_ring_set_mode(ring, HASH_RING_MODE_LIBMEMCACHED_COMPAT) == HASH_RING_ERR);
+    hash_ring_free(ring);
+
+    ring = hash_ring_create(1, HASH_FUNCTION_MD5);
+    assert(hash_ring_set_mode(ring, HASH_RING_MODE_LIBMEMCACHED_COMPAT) == HASH_RING_OK);
+
+    /**
+     * TODO - Add tests to make sure libmemcached compat hashes correctly.
+     */
+
     hash_ring_free(ring);
 }

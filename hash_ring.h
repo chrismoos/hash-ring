@@ -28,6 +28,21 @@
 
 #define HASH_RING_DEBUG 1
 
+/**
+ * This will do the hashing in the standard hash-ring way. See the README
+ */
+#define HASH_RING_MODE_NORMAL 1
+
+/**
+ * Hashing of nodes is the same as libmemcached.
+ * The hash function must be HASH_FUNCTION_MD5.
+ *
+ * @see https://github.com/RJ/ketama/blob/master/libketama/ketama.c#L433
+ */
+#define HASH_RING_MODE_LIBMEMCACHED_COMPAT 2
+
+typedef uint8_t HASH_MODE;
+
 typedef struct ll_t {
     void *data;
     struct ll_t *next;
@@ -81,6 +96,9 @@ typedef struct hash_ring_t {
     
     /* The hash function to use for this ring */
     HASH_FUNCTION hash_fn;
+
+    /* The mode for hashing */
+    HASH_MODE mode;
 } hash_ring_t;
 
 /**
@@ -150,5 +168,20 @@ int hash_ring_remove_node(hash_ring_t *ring, uint8_t *name, uint32_t nameLen);
  * Print the hash ring to stdout.
  */
 void hash_ring_print(hash_ring_t *ring);
+
+/**
+ * Sets the mode for hashing.
+ *
+ * This should be set after creating a ring and before adding nodes.
+ *
+ * If mode is set to HASH_RING_MODE_LIBMEMCACHED_COMPAT then the hash function must be HASH_FUNCTION_MD5 or this
+ * call will fail.
+ *
+ * @param ring The ring to set the mode on.
+ * @param mode The mode to set the hashing to.
+ *
+ * @returns HASH_RING_OK if the mode was set.
+ */
+int hash_ring_set_mode(hash_ring_t *ring, HASH_MODE mode);
 
 #endif

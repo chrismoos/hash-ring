@@ -44,6 +44,7 @@ hash_ring_t *hash_ring_create(uint32_t numReplicas, HASH_FUNCTION hash_fn) {
     ring->numNodes = 0;
     ring->numItems = 0;
     ring->hash_fn = hash_fn;
+    ring->mode = HASH_RING_MODE_NORMAL;
     
     return ring;
 }
@@ -81,26 +82,27 @@ static int hash_ring_hash(hash_ring_t *ring, uint8_t *data, uint8_t dataLen, uin
         md5_append(&state, (md5_byte_t*)data, dataLen);
         md5_finish(&state, (md5_byte_t*)&digest);
 
-#ifdef LIBMEMCACHED_COMPAT
-        uint32_t low = (digest[3] << 24 | digest[2] << 16 | digest[1] << 8 | digest[0]);
-        uint64_t keyInt;
-        keyInt = low;
-	*hash = keyInt;
-	return 0;
-#else
-        uint32_t low = (digest[11] << 24 | digest[10] << 16 | digest[9] << 8 | digest[8]);
-        uint32_t high = (digest[15] << 24 | digest[14] << 16 | digest[13] << 8 | digest[12]);
-        uint64_t keyInt;
-        
-        keyInt = high;
-        keyInt <<= 32;
-        keyInt &= 0xffffffff00000000LLU;
-        keyInt |= low;
-        
-        *hash = keyInt;
-        
-        return 0;
-#endif
+        if(ring->mode == HASH_RING_MODE_LIBMEMCACHED_COMPAT) {
+            uint32_t low = (digest[3] << 24 | digest[2] << 16 | digest[1] << 8 | digest[0]);
+            uint64_t keyInt;
+            keyInt = low;
+            *hash = keyInt;
+            return 0;
+        }
+        else {
+            uint32_t low = (digest[11] << 24 | digest[10] << 16 | digest[9] << 8 | digest[8]);
+            uint32_t high = (digest[15] << 24 | digest[14] << 16 | digest[13] << 8 | digest[12]);
+            uint64_t keyInt;
+            
+            keyInt = high;
+            keyInt <<= 32;
+            keyInt &= 0xffffffff00000000LLU;
+            keyInt |= low;
+            
+            *hash = keyInt;
+            
+            return 0;
+        }
     }
     else if(ring->hash_fn == HASH_FUNCTION_SHA1) {
         SHA1Context sha1_ctx;
@@ -176,11 +178,12 @@ int hash_ring_add_items(hash_ring_t *ring, hash_ring_node_t *node) {
     }
     ring->items = (hash_ring_item_t**)resized;
     for(x = 0; x < ring->numReplicas; x++) {
-#ifdef LIBMEMCACHED_COMPAT
-        concat_len = snprintf(concat_buf, sizeof(concat_buf), "-%d", x);
-#else
-        concat_len = snprintf(concat_buf, sizeof(concat_buf), "%d", x);
-#endif
+        if(ring->mode == HASH_RING_MODE_LIBMEMCACHED_COMPAT) {
+            concat_len = snprintf(concat_buf, sizeof(concat_buf), "-%d", x);
+        }
+        else {
+            concat_len = snprintf(concat_buf, sizeof(concat_buf), "%d", x);
+        }
 
         uint8_t *data = (uint8_t*)malloc(concat_len + node->nameLen);
         memcpy(data, node->name, node->nameLen);
@@ -376,5 +379,23 @@ hash_ring_node_t *hash_ring_find_node(hash_ring_t *ring, uint8_t *key, uint32_t 
     }
     else {
         return item->node;
+    }
+}
+
+int hash_ring_set_mode(hash_ring_t *ring, HASH_MODE mode) {
+    if(ring == NULL) return HASH_RING_ERR;
+
+    if(mode == HASH_RING_MODE_LIBMEMCACHED_COMPAT) {
+        if(ring->hash_fn != HASH_FUNCTION_MD5) return HASH_RING_ERR;
+        ring->mode = mode;
+        return HASH_RING_OK;
+    }
+    else if(mode == HASH_RING_MODE_NORMAL) {
+        ring->mode = mode;
+        return HASH_RING_OK;
+    }
+    else {
+        /* Invalid mode */
+        return HASH_RING_ERR;
     }
 }

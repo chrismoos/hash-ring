@@ -54,6 +54,8 @@ It is helpful to know how a node is hashed onto the ring, especially if you want
   
 The least significant **64-bits** of the digest are used to retrieve the integer.
 
+**Note**: You can use *hash\_ring\_set\_mode* to use HASH\_RING\_MODE\_LIBMEMCACHED\_COMPAT which will add nodes as "node-index" and will hash to a 32-bit integer instead. This is what libmemcached uses.
+
 ## Compiling 
 
 Compile the library and install with:
