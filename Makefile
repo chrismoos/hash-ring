@@ -27,7 +27,7 @@ java:
 	cd lib/java && gradle jar
 
 python:
-	cd lib/python && ./setup.py install
+	cd lib/python && ./setup.py bdist
 
 build/%.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
