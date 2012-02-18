@@ -3,6 +3,11 @@ override CFLAGS += -O3 -Wall -fPIC
 LDFLAGS =
 OBJECTS = build/hash_ring.o build/sha1.o build/sort.o build/md5.o
 TEST_OBJECTS = build/hash_ring_test.o
+ifdef PREFIX
+	prefix=$(PREFIX)
+else
+	prefix=/usr/local
+endif
 
 ifeq ($(OS), Darwin)
 	SHARED_LIB = build/libhashring.so
@@ -36,5 +41,7 @@ clean:
 	rm -rf $(OBJECTS) $(TEST_OBJECTS) $(SHARED_LIB)
 	
 install: lib
-	cp -f $(SHARED_LIB) /usr/local/lib/
-	cp hash_ring.h /usr/local/include/
+	mkdir -p $(prefix)/lib
+	mkdir -p $(prefix)/include
+	cp -f $(SHARED_LIB) $(prefix)/lib/
+	cp hash_ring.h $(prefix)/include/
