@@ -22,7 +22,9 @@
 
 #include "hash_ring.h"
 
+#ifdef __APPLE__
 #include <mach/mach_time.h>
+#endif
 
 static uint64_t opStartTime = 0;
 

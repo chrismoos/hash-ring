@@ -9,10 +9,12 @@ else
 	prefix=/usr/local
 endif
 
-ifeq ($(OS), Darwin)
-	SHARED_LIB = build/libhashring.so
-else
+UNAME=$(shell uname)
+
+ifeq ($(UNAME), Darwin)
 	SHARED_LIB = build/libhashring.dylib
+else
+	SHARED_LIB = build/libhashring.so
 endif
 
 lib: $(OBJECTS)

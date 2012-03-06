@@ -1,0 +1,5 @@
+hash-ring (1.0.0) stable; urgency=low
+
+  * Initial release
+
+ -- Chris Moos <chris@tech9computers.com>  Mon, 05 Mar 2012 02:37:00 -0700

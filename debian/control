@@ -1,0 +1,13 @@
+Source: hash-ring
+Section: unknown
+Priority: extra
+Maintainer: Chris Moos <chris@tech9computers.com>
+Build-Depends: debhelper (>= 7)
+Standards-Version: 3.8.3
+Homepage: https://github.com/chrismoos/hash-ring
+
+Package: hash-ring
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Library for consistent hashing.
+
