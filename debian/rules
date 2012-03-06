@@ -17,6 +17,7 @@ override_dh_auto_clean:
 
 override_dh_auto_test:
     
+override_dh_auto_install:
 
 override_dh_installinit:
 
