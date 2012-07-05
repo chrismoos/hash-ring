@@ -24,6 +24,7 @@ import com.sun.jna.Structure;
 import com.sun.jna.Pointer;
 import com.sun.jna.NativeLong;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 
 /**
@@ -99,7 +100,12 @@ public class HashRing {
         if(node == null) {
             throw new HashRingException("Failed to find node");
         }
-        return node.name;
+        try {
+            return new String(node.name.getByteArray(0, node.nameLength), "UTF-8");
+        }
+        catch(UnsupportedEncodingException uee) {
+            throw new HashRingException("Unable to get UTF-8 representation of node", uee);
+        }
     }
     
     /**
@@ -157,7 +163,7 @@ public class HashRing {
      * This class defines the hash_ring_node_t structure.
      */
     public static class NodeStructure extends Structure {
-        public String name;
+        public Pointer name;
         public int nameLength;
     }
     
