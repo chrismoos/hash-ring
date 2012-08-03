@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <arpa/inet.h>
 #include "erl_driver.h"
 
 #include "hash_ring.h"
@@ -96,7 +97,7 @@ static uint32_t readUint32(uint8_t *buf) {
     return ntohl(num);
 }
 
-static void hash_ring_drv_output(ErlDrvData handle, char *buff, int bufflen)
+static void hash_ring_drv_output(ErlDrvData handle, char *buff, ErlDrvSizeT bufflen)
 {
     hash_ring_data* d = (hash_ring_data*)handle;
     char res = RETURN_ERR;
@@ -173,17 +174,29 @@ static void hash_ring_drv_output(ErlDrvData handle, char *buff, int bufflen)
 }
 
 ErlDrvEntry hash_ring_driver_entry = {
-    NULL,			/* F_PTR init, N/A */
-    hash_ring_drv_start,		/* L_PTR start, called when port is opened */
-    hash_ring_drv_stop,		/* F_PTR stop, called when port is closed */
-    hash_ring_drv_output,		/* F_PTR output, called when erlang has sent */
-    NULL,			/* F_PTR ready_input, called when input descriptor ready */
-    NULL,			/* F_PTR ready_output, called when output descriptor ready */
-    "hash_ring_drv",		/* char *driver_name, the argument to open_port */
-    NULL,			/* F_PTR finish, called when unloaded */
-    NULL,			/* F_PTR control, port_command callback */
-    NULL,			/* F_PTR timeout, reserved */
-    NULL			/* F_PTR outputv, reserved */
+  NULL, /* init */
+  hash_ring_drv_start,
+  hash_ring_drv_stop,
+  hash_ring_drv_output,
+  NULL, /* ready_input */
+  NULL, /* ready_output */
+  "hash_ring_drv", /* driver_name */
+  NULL, /* finish */
+  NULL, /* handle (reserved) */
+  NULL, /* control */
+  NULL, /* timeout */
+  NULL, /* outputv */
+  NULL, /* ready_async */
+  NULL, /* flush */
+  NULL, /* call */
+  NULL, /* event */
+  ERL_DRV_EXTENDED_MARKER,
+  ERL_DRV_EXTENDED_MAJOR_VERSION,
+  ERL_DRV_EXTENDED_MINOR_VERSION,
+  0, /* driver_flags */
+  NULL, /* handle2 (reserved) */
+  NULL, /* process_exit */
+  NULL /* stop_select */
 };
 
 DRIVER_INIT(hash_ring_drv) /* must match name in driver_entry */
