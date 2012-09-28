@@ -11,6 +11,16 @@ endif
 
 UNAME=$(shell uname)
 
+ERLANG_RELEASE=$(shell erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().'  -noshell)
+ERLANG_RELEASE_VER=$(shell echo $(ERLANG_RELEASE) | sed -E "s/R([0-9]+).*/\1/")
+ERLANG_R14_OR_HIGHER=$(shell expr $(ERLANG_RELEASE_VER) \>= 14)
+
+ifeq ($(ERLANG_R14_OR_HIGHER), 1)
+	REBAR="./rebar"
+else
+	REBAR="./rebar.r13"
+endif
+
 ifeq ($(UNAME), Darwin)
 	SHARED_LIB = build/libhashring.dylib
 else
@@ -28,7 +38,7 @@ test : lib $(TEST_OBJECTS)
 bindings: erl java python
 
 erl:
-	./rebar compile
+	$(REBAR) compile
 	
 java:
 	cd lib/java && gradle jar
