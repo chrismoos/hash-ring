@@ -1,5 +1,7 @@
 # libhashring
 
+[![Build Status](https://travis-ci.org/chrismoos/hash-ring.png)](https://travis-ci.org/chrismoos/hash-ring)
+
 This library provides a consistent hashing implementation that supports SHA-1 and MD5. It is high performance and suitable for rings with a large number of items (replicas or nodes). The following bindings are available:
 
  * Erlang
