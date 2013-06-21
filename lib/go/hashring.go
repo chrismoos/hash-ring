@@ -20,10 +20,14 @@ func New(numReplicas int, fn C.HASH_FUNCTION) *Ring {
 	return &Ring{C.hash_ring_create(C.uint32_t(numReplicas), fn)}
 }
 
-func (r *Ring) Add (node []byte) {
+func (r *Ring) Add(node []byte) {
 	C.hash_ring_add_node(r.ptr, (*C.uint8_t)(&node[0]), C.uint32_t(len(node)))
 }
 
-func (r *Ring) Print () {
+func (r *Ring) Print() {
 	C.hash_ring_print(r.ptr)
+}
+
+func (r *Ring) Free() {
+	C.hash_ring_free(r.ptr)
 }
