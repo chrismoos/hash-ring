@@ -26,6 +26,10 @@ func (r *Ring) Add(node []byte) {
 	C.hash_ring_add_node(r.ptr, (*C.uint8_t)(&node[0]), C.uint32_t(len(node)))
 }
 
+func (r *Ring) Remove(node []byte) {
+	C.hash_ring_remove_node(r.ptr, (*C.uint8_t)(&node[0]), C.uint32_t(len(node)))
+}
+
 func (r *Ring) Print() {
 	C.hash_ring_print(r.ptr)
 }
