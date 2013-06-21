@@ -8,6 +8,8 @@ package hashring
 */
 import "C"
 
+import "unsafe"
+
 const (
 	MD5 = C.HASH_FUNCTION_MD5
 )
@@ -30,4 +32,10 @@ func (r *Ring) Print() {
 
 func (r *Ring) Free() {
 	C.hash_ring_free(r.ptr)
+}
+
+func (r *Ring) FindNode(key []byte) []byte {
+	var s *C.hash_ring_node_t
+	s = C.hash_ring_find_node(r.ptr, (*C.uint8_t)(&key[0]), C.uint32_t(len(key)))
+	return C.GoBytes(unsafe.Pointer(s.name), C.int(s.nameLen))
 }
