@@ -34,6 +34,7 @@ void testEmptyRingItemSearchReturnsNull();
 void testEmptyRingSearchReturnsNull();
 void testKnownNextHighestItemOnRing();
 void testKnownSlotsOnRing();
+void testKnownMultipleSlotsOnRing();
 void testRingSorted();
 void runBenchmark();
 void testLibmemcachedCompat();
@@ -50,6 +51,7 @@ int main(int argc, char **argv) {
     testEmptyRingItemSearchReturnsNull();
     testEmptyRingSearchReturnsNull();
     testKnownSlotsOnRing();
+    testKnownMultipleSlotsOnRing();
     
     runBenchmark();
     
@@ -259,6 +261,76 @@ void testKnownSlotsOnRing() {
     
     node = hash_ring_find_node(ring, (uint8_t*)keyC, strlen(keyC));
     assert(node != NULL && node->nameLen == strlen(slotB) && memcmp(node->name, slotB, strlen(slotB)) == 0);
+
+    hash_ring_free(ring);
+}
+
+void testKnownMultipleSlotsOnRing() {
+    printf("\n\nTest getting multiple known nodes on ring...\n\n");
+
+    hash_ring_t *ring = hash_ring_create(8, HASH_FUNCTION_SHA1);
+    char *slotA = "slotA";
+    char *slotB = "slotB";
+    char *slotC = "slotC";
+
+    // hashes to a low number
+    char *keyA = "keyA";
+    // hashes to high number
+    char *keyB = "keyB*_*_*_";
+
+    int x;
+    hash_ring_node_t *nodes[3];
+
+    assert(hash_ring_add_node(ring, (uint8_t*)slotA, strlen(slotA)) == HASH_RING_OK);
+    assert(hash_ring_add_node(ring, (uint8_t*)slotB, strlen(slotB)) == HASH_RING_OK);
+
+    x = hash_ring_find_nodes(ring, (uint8_t*)keyA, strlen(keyA), nodes, 3);
+    assert(
+        x == 2 &&
+        nodes[0] != NULL &&
+            nodes[0]->nameLen == strlen(slotA) &&
+            memcmp(nodes[0]->name, slotA, strlen(slotA)) == 0 &&
+        nodes[1] != NULL &&
+            nodes[1]->nameLen == strlen(slotB) &&
+            memcmp(nodes[1]->name, slotB, strlen(slotB)) == 0);
+
+    x = hash_ring_find_nodes(ring, (uint8_t*)keyB, strlen(keyB), nodes, 3);
+    assert(
+        x == 2 &&
+        nodes[0] != NULL &&
+            nodes[0]->nameLen == strlen(slotB) &&
+            memcmp(nodes[0]->name, slotB, strlen(slotB)) == 0 &&
+        nodes[1] != NULL &&
+            nodes[1]->nameLen == strlen(slotA) &&
+            memcmp(nodes[1]->name, slotA, strlen(slotA)) == 0);
+
+    assert(hash_ring_add_node(ring, (uint8_t*)slotC, strlen(slotC)) == HASH_RING_OK);
+
+    x = hash_ring_find_nodes(ring, (uint8_t*)keyA, strlen(keyA), nodes, 3);
+    assert(
+        x == 3 &&
+        nodes[0] != NULL &&
+            nodes[0]->nameLen == strlen(slotC) &&
+            memcmp(nodes[0]->name, slotC, strlen(slotC)) == 0 &&
+        nodes[1] != NULL &&
+            nodes[1]->nameLen == strlen(slotA) &&
+            memcmp(nodes[1]->name, slotA, strlen(slotA)) == 0 &&
+        nodes[2] != NULL &&
+            nodes[2]->nameLen == strlen(slotB) &&
+            memcmp(nodes[2]->name, slotB, strlen(slotB)) == 0);
+
+    x = hash_ring_find_nodes(ring, (uint8_t*)keyB, strlen(keyB), nodes, 3);
+    assert(
+        x == 3 &&
+        nodes[0] != NULL &&
+            nodes[0]->nameLen == strlen(slotC) &&
+            memcmp(nodes[0]->name, slotC, strlen(slotC)) == 0 &&
+        nodes[1] != NULL &&
+            nodes[1]->nameLen == strlen(slotB) &&
+            memcmp(nodes[1]->name, slotB, strlen(slotB)) == 0 &&
+        nodes[2] != NULL &&
+            nodes[2]->nameLen == strlen(slotA) &&
+            memcmp(nodes[2]->name, slotA, strlen(slotA)) == 0);
 
     hash_ring_free(ring);
 }

@@ -382,6 +382,52 @@ hash_ring_node_t *hash_ring_find_node(hash_ring_t *ring, uint8_t *key, uint32_t 
     }
 }
 
+/*
+ * Consistently hash the key to num nodes;
+ * returns the number of nodes found, or -1 if there is an error
+ */
+int hash_ring_find_nodes(
+        hash_ring_t *ring,
+        uint8_t *key,
+        uint32_t keyLen,
+        hash_ring_node_t **nodes,
+        uint32_t num) {
+
+    // the number of nodes we're going to return is either the number of nodes
+    // requested, or the number of nodes available
+    int ret = ring->numNodes < num ? ring->numNodes : num;
+
+    uint64_t keyInt;
+    if(hash_ring_hash(ring, key, keyLen, &keyInt) == -1) return -1;
+
+    hash_ring_item_t *item;
+    int x = 0;
+    int seen;
+    int i;
+
+    while(1) {
+        item = hash_ring_find_next_highest_item(ring, keyInt);
+        if(item == NULL) return -1;
+        keyInt = item->number;
+
+        // if we've already included this node, skip it
+        seen = 0;
+        for(i=0; i<x; i++) {
+            if(item->node == nodes[i]) {
+                seen = 1;
+                break;
+            }
+        }
+        if(seen) continue;
+
+        nodes[x] = item->node;
+        x++;
+        if(x == ret) break;
+    }
+
+    return ret;
+}
+
 int hash_ring_set_mode(hash_ring_t *ring, HASH_MODE mode) {
     if(ring == NULL) return HASH_RING_ERR;
 
