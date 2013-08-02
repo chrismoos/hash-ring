@@ -23,6 +23,29 @@ class CHashRingTests(unittest.TestCase):
         self.assertEquals(node, 'slotB')
         new_hash.free()
 
+    def test_find_nodes(self):
+        """ Based on hash_ring_test's test """
+        new_hash = HashRing(
+            ["slotA", "slotB"],
+            num_replicas = 8,
+            hash_fn = HashFunction.SHA1)
+        keyA = 'keyA'
+        keyB = 'keyB*_*_*_'
+        servers = new_hash.find_nodes(keyA, 3)
+        self.assertEquals(servers, ['slotA', 'slotB'])
+        servers = new_hash.find_nodes(keyB, 3)
+        self.assertEquals(servers, ['slotB', 'slotA'])
+        new_hash.add_node('slotC')
+        servers = new_hash.find_nodes(keyA, 3)
+        self.assertEquals(servers, ['slotC', 'slotA', 'slotB'])
+        servers = new_hash.find_nodes(keyB, 3)
+        self.assertEquals(servers, ['slotC', 'slotB', 'slotA'])
+        servers = new_hash.find_nodes(keyA, 2)
+        self.assertEquals(servers, ['slotC', 'slotA'])
+        servers = new_hash.find_nodes(keyB, 2)
+        self.assertEquals(servers, ['slotC', 'slotB'])
+        new_hash.free()
+
     def test_add_node(self):
         hash = HashRing()
         self.assertFalse(hash.check_node_in_ring('redis1'))
