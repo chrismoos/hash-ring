@@ -390,7 +390,7 @@ int hash_ring_find_nodes(
         hash_ring_t *ring,
         uint8_t *key,
         uint32_t keyLen,
-        hash_ring_node_t **nodes,
+        hash_ring_node_t *nodes[],
         uint32_t num) {
 
     // the number of nodes we're going to return is either the number of nodes

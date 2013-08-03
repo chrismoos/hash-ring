@@ -151,6 +151,12 @@ hash_ring_node_t *hash_ring_get_node(hash_ring_t *ring, uint8_t *name, uint32_t 
 hash_ring_node_t *hash_ring_find_node(hash_ring_t *ring, uint8_t *key, uint32_t keyLen);
 
 /**
+ * Finds the set of num nodes by hashing the given key and searching the ring.
+ * Returns the number of nodes found, or -1 if there is an error
+ */
+int hash_ring_find_nodes(hash_ring_t *ring, uint8_t *key, uint32_t keyLen, hash_ring_node_t *nodes[], uint32_t num);
+
+/**
  * Find the next highest item for the given num.
  * This function is invoked by hash_ring_find_node to locate a key on the ring. If you want to do your own hashing on 
  * the keys, you might call this function, but probably not.
