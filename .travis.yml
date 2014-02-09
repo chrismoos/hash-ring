@@ -1,7 +1,4 @@
-language: c
+language: java
 compiler:
   - gcc
-before_install:
-    - sudo apt-get update
-    - sudo apt-get install gradle
 script: LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(pwd)/build" make test && make clean && make bindings
