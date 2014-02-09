@@ -56,6 +56,14 @@ def set_up_hash_ring_ctypes():
     hash_ring.hash_ring_find_node.argtypes = NODE_NAME_ARGTYPES
     hash_ring.hash_ring_find_node.restype = HASH_RING_NODE_POINTER
 
+    hash_ring.hash_ring_find_nodes.argtypes = (
+        ctypes.c_void_p,   # ring
+        ctypes.c_char_p,   # key
+        ctypes.c_int,      # keyLen
+        ctypes.c_void_p,   # nodes
+        ctypes.c_int)      # num
+    hash_ring.hash_ring_find_nodes.restype = ctypes.c_int
+
     hash_ring.hash_ring_print.argtypes = (ctypes.c_void_p,)
 
     hash_ring.hash_ring_free.argtypes = (ctypes.c_void_p,)
@@ -93,6 +101,20 @@ class HashRing(object):
             node_struct = node_struct_ptr.contents
             return node_struct.name[:node_struct.nameLen]
         return None
+
+    def find_nodes(self, key, num):
+        nodes = (HASH_RING_NODE_POINTER*num)()
+
+        got = hash_ring.hash_ring_find_nodes(
+            self._hash_ring_ptr, key, len(key), nodes, num)
+        if got == -1:
+            return None
+
+        ret = []
+        for x in xrange(got):
+            node = nodes[x].contents
+            ret.append(node.name[:node.nameLen])
+        return ret
 
     def free(self):
         hash_ring.hash_ring_free(self._hash_ring_ptr)
