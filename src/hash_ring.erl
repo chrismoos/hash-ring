@@ -97,14 +97,16 @@ set_mode(Ring, Mode) when is_integer(Mode) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -record(state, {
           port,
-          rings
+          rings,
+          queue
 }).
 
 init(Drv) ->
     Port = open_port({spawn, Drv}, [binary]),
     {ok, #state{
        port = Port,
-       rings = dict:new() }}.
+       rings = dict:new(),
+       queue = queue:new() }}.
 
     
     
@@ -160,21 +162,12 @@ handle_call({remove_node, {Ring, Node}}, _From, #state{ port = Port, rings = Rin
             {reply, {error, ring_not_found}, State}
     end;
 
-handle_call({find_node, {Ring, Key}}, _From, #state{ port = Port, rings = Rings } = State) ->
+handle_call({find_node, {Ring, Key}}, From, #state{ port = Port, rings = Rings, queue = Queue } = State) ->
     case dict:find(Ring, Rings) of
         {ok, Index} ->
             KeySize = size(Key),
             Port ! {self(), {command, <<5:8, Index:32, KeySize:32, Key/binary>>}},
-            receive
-                {Port, {data, <<3:8>>}} ->
-                    {reply, {error, invalid_ring}, State};
-                {Port, {data, <<2:8>>}} ->
-                    {reply, {error, node_not_found}, State};
-                {Port, {data, <<1:8>>}} ->
-                    {reply, {error, unknown_error}, State};
-                {Port, {data, <<Node/binary>>}} ->
-                    {reply, {ok, Node}, State}
-            end;
+            {noreply, State#state{queue = queue:in(From, Queue)}};
         _ ->
             {reply, {error, ring_not_found}, State}
     end;
@@ -198,6 +191,21 @@ handle_call(stop, _From, State) ->
 
 handle_cast(_, State) ->
     {noreply, State}.
+handle_info({Port, {data, Data}}, #state{port = Port, queue = Queue} = State) ->
+    R =
+    case Data of
+        <<3:8>> ->
+            {error, invalid_ring};
+        <<2:8>> ->
+            {error, node_not_found};
+        <<1:8>> ->
+            {error, unknown_error};
+        <<Node/binary>> ->
+            {ok, Node}
+    end,
+    {{value, Pid}, QTail} = queue:out(Queue),
+    safe_reply(Pid, R),
+    {noreply, State#state{queue = QTail}};
 
 handle_info({'EXIT', Port, _Reason} = PortExit, #state{ port = Port } = State ) ->
     {stop, PortExit, State}.
@@ -214,6 +222,10 @@ terminate(_, #state{ port = Port }) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
+safe_reply(undefined, _Value) ->
+    ok;
+safe_reply(From, Value) ->
+    gen_server:reply(From, Value).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
