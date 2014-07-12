@@ -10,6 +10,7 @@ else
 endif
 
 UNAME=$(shell uname)
+TOP:=$(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 ERLANG_RELEASE=$(shell erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().'  -noshell)
 ERLANG_RELEASE_VER=$(shell echo $(ERLANG_RELEASE) | sed -E "s/R([0-9]+).*/\1/")
@@ -30,8 +31,11 @@ endif
 lib: $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o $(SHARED_LIB) -shared
 
-test : lib $(TEST_OBJECTS)
+test : lib bindings $(TEST_OBJECTS)
 	mkdir -p bin
+	LD_LIBRARY_PATH="$(TOP)/build" $(REBAR) compile eunit
+	cd lib/java && LD_LIBRARY_PATH="$(TOP)/build" gradle test
+	cd lib/python && LD_LIBRARY_PATH="$(TOP)/build" python tests.py
 	$(CC) $(CFLAGS) $(LDFLAGS) $(TEST_OBJECTS) -lhashring -L./build -o bin/hash_ring_test
 	bin/hash_ring_test
 
