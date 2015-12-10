@@ -55,6 +55,7 @@ build/%.o : %.c
 	
 clean:
 	rm -rf $(OBJECTS) $(TEST_OBJECTS) $(SHARED_LIB)
+	$(REBAR) clean
 	
 install: lib
 	mkdir -p $(prefix)/lib

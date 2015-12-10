@@ -25,7 +25,7 @@
 #include "sort.h"
 #include "md5.h"
 
-static int item_sort(void *a, void *b);
+static int item_sort(const void *a, const void *b);
 
 hash_ring_t *hash_ring_create(uint32_t numReplicas, HASH_FUNCTION hash_fn) {
     hash_ring_t *ring = NULL;
@@ -204,10 +204,10 @@ int hash_ring_add_items(hash_ring_t *ring, hash_ring_node_t *node) {
     return HASH_RING_OK;
 }
 
-static int item_sort(void *a, void *b) {
-    hash_ring_item_t *itemA = a, *itemB = b;
-    if(a == NULL) return 1;
-    if(b == NULL) return -1;
+static int item_sort(const void *a, const void *b) {
+    hash_ring_item_t *itemA = *(hash_ring_item_t**)a, *itemB = *(hash_ring_item_t**)b;
+    if(itemA == NULL) return 1;
+    if(itemB == NULL) return -1;
 
     if(itemA->number < itemB->number) {
         return -1;
@@ -259,7 +259,7 @@ int hash_ring_add_node(hash_ring_t *ring, uint8_t *name, uint32_t nameLen) {
     }
 
     // Sort the items
-    quicksort((void**)ring->items, ring->numItems, item_sort);
+    qsort((void**)ring->items, ring->numItems, sizeof(struct hash_ring_item_t*), item_sort);
 
     return HASH_RING_OK;
 }
@@ -297,7 +297,7 @@ int hash_ring_remove_node(hash_ring_t *ring, uint8_t *name, uint32_t nameLen) {
                 
                 // By re-sorting, all the NULLs will be at the end of the array
                 // Then the numItems is reset and that memory is no longer used
-                quicksort((void**)ring->items, ring->numItems, item_sort);
+                qsort((void**)ring->items, ring->numItems, sizeof(struct hash_ring_item_t*), item_sort);
                 ring->numItems -= ring->numReplicas;
                 
                 free(node);

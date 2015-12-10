@@ -189,6 +189,7 @@ void runBenchmark() {
     runBench(hash_fn, 512, 32, 100000, 16);
     runBench(hash_fn, 512, 128, 10000, 16);
     runBench(hash_fn, 16, 1024, 1000, 16);
+    runBench(hash_fn, 2048, 128, 1000, 16);
 }
 
 void testRingSorting(int num) {

@@ -28,6 +28,5 @@
 typedef int (*compare_func)(void *a, void *b);
 
 void bubble_sort_array(void **array, int numItems, compare_func fn);
-void quicksort(void **array, int numItems, compare_func fn);
 
 #endif
