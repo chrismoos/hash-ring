@@ -9,7 +9,7 @@ This library provides a consistent hashing implementation that supports SHA-1 an
 
 ## License (See LICENSE file for full license)
 
-Copyright 2011 LiveProfile
+Copyright 2015 Chris Moos
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

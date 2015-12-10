@@ -1,5 +1,5 @@
 /**
- * Copyright 2011 LiveProfile
+ * Copyright 2015 Chris Moos
  * 
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
