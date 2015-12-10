@@ -34,7 +34,7 @@ lib: $(OBJECTS)
 test : lib bindings $(TEST_OBJECTS)
 	mkdir -p bin
 	LD_LIBRARY_PATH="$(TOP)/build" $(REBAR) compile eunit
-	cd lib/java && LD_LIBRARY_PATH="$(TOP)/build" gradle test
+	cd lib/java && LD_LIBRARY_PATH="$(TOP)/build" ./gradlew test
 	cd lib/python && LD_LIBRARY_PATH="$(TOP)/build" python tests.py
 	$(CC) $(CFLAGS) $(LDFLAGS) $(TEST_OBJECTS) -lhashring -L./build -o bin/hash_ring_test
 	bin/hash_ring_test
@@ -45,7 +45,7 @@ erl:
 	$(REBAR) compile
 	
 java:
-	cd lib/java && gradle jar
+	cd lib/java && ./gradlew jar
 
 python:
 	cd lib/python && ./setup.py bdist
@@ -56,6 +56,7 @@ build/%.o : %.c
 clean:
 	rm -rf $(OBJECTS) $(TEST_OBJECTS) $(SHARED_LIB)
 	$(REBAR) clean
+	cd lib/java && ./gradlew clean
 	
 install: lib
 	mkdir -p $(prefix)/lib
