@@ -21,6 +21,7 @@
          add_node/2,
          remove_node/2,
          find_node/2,
+         find_nodes/3,
          set_mode/2,
          stop/0
 ]).
@@ -83,11 +84,21 @@ remove_node(Ring, Node) when is_list(Node) ->
 remove_node(Ring, Node) when is_binary(Node) ->
     gen_server:call(?SERVER, {remove_node, {Ring, Node}}).
 
-find_node(Ring, Key) when is_list(Key) ->
-    find_node(Ring, list_to_binary(Key));
+find_node(Ring, Key) ->
+    case find_nodes(Ring, Key, 1) of
+        {error, Reason} ->
+            {error, Reason};
+        {ok, []} ->
+            {ok, <<>>};
+        {ok, [Ret]} ->
+            {ok, Ret}
+    end.
 
-find_node(Ring, Key) when is_binary(Key) ->
-    gen_server:call(?SERVER, {find_node, {Ring, Key}}).
+find_nodes(Ring, Key, Num) when is_list(Key) ->
+    find_nodes(Ring, list_to_binary(Key), Num);
+
+find_nodes(Ring, Key, Num) when is_binary(Key) ->
+    gen_server:call(?SERVER, {find_nodes, {Ring, Key, Num}}).
 
 set_mode(Ring, Mode) when is_integer(Mode) ->
     gen_server:call(?SERVER, {set_mode, {Ring, Mode}}).
@@ -162,11 +173,11 @@ handle_call({remove_node, {Ring, Node}}, _From, #state{ port = Port, rings = Rin
             {reply, {error, ring_not_found}, State}
     end;
 
-handle_call({find_node, {Ring, Key}}, From, #state{ port = Port, rings = Rings, queue = Queue } = State) ->
+handle_call({find_nodes, {Ring, Key, Num}}, From, #state{ port = Port, rings = Rings, queue = Queue } = State) ->
     case dict:find(Ring, Rings) of
         {ok, Index} ->
             KeySize = size(Key),
-            Port ! {self(), {command, <<5:8, Index:32, KeySize:32, Key/binary>>}},
+            Port ! {self(), {command, <<7:8, Index:32, KeySize:32, Num:32, Key/binary>>}},
             {noreply, State#state{queue = queue:in(From, Queue)}};
         _ ->
             {reply, {error, ring_not_found}, State}
@@ -200,8 +211,8 @@ handle_info({Port, {data, Data}}, #state{port = Port, queue = Queue} = State) ->
             {error, node_not_found};
         <<1:8>> ->
             {error, unknown_error};
-        <<Node/binary>> ->
-            {ok, Node}
+        <<Nodes/binary>> ->
+            {ok, binary:split(Nodes, <<"|">>, [global, trim_all])}
     end,
     {{value, Pid}, QTail} = queue:out(Queue),
     safe_reply(Pid, R),
@@ -279,8 +290,18 @@ find_known_keys_in_ring_test() ->
     
     ?assert(find_node(Ring, <<"keyA">>) == {ok, <<"slotA">>}),
     ?assert(find_node(Ring, <<"keyBBBB">>) == {ok, <<"slotA">>}),
-    ?assert(find_node(Ring, <<"keyB_">>) == {ok, <<"slotB">>}).
-    
+    ?assert(find_node(Ring, <<"keyB_">>) == {ok, <<"slotB">>}),
+
+    ?assert(find_nodes(Ring, <<"keyA">>, 1) == {ok, [<<"slotA">>]}),
+    ?assert(find_nodes(Ring, <<"keyA">>, 2) == {ok, [<<"slotA">>, <<"slotB">>]}),
+    ?assert(find_nodes(Ring, <<"keyA">>, 3) == {ok, [<<"slotA">>, <<"slotB">>]}),
+    ?assert(find_nodes(Ring, <<"keyBBBB">>, 1) == {ok, [<<"slotA">>]}),
+    ?assert(find_nodes(Ring, <<"keyBBBB">>, 2) == {ok, [<<"slotA">>, <<"slotB">>]}),
+    ?assert(find_nodes(Ring, <<"keyBBBB">>, 3) == {ok, [<<"slotA">>, <<"slotB">>]}),
+    ?assert(find_nodes(Ring, <<"keyB_">>, 1) == {ok, [<<"slotB">>]}),
+    ?assert(find_nodes(Ring, <<"keyB_">>, 2) == {ok, [<<"slotB">>,<<"slotA">>]}),
+    ?assert(find_nodes(Ring, <<"keyB_">>, 3) == {ok, [<<"slotB">>,<<"slotA">>]}).
+
 remove_node_test() ->
     setup_driver(),
     Ring = "myring",
