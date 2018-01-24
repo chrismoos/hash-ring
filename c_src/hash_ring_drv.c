@@ -173,22 +173,24 @@ static void hash_ring_drv_output(ErlDrvData handle, char *buff, ErlDrvSizeT buff
         if((bufflen - 13) == keyLen && d->numRings > index && d->ring_usage[index] == 1) {
             hash_ring_node_t *nodes[num];
             int ret = hash_ring_find_nodes(d->rings[index], (unsigned char*)&buff[13], keyLen, nodes, num);
-            int retLen = 0;
-            int x;
-            for (x = 0; x < ret; x++) {
-                retLen += nodes[x]->nameLen + 1;
-            }
+            if (ret > 0) {
+                int retLen = 0;
+                    int x;
+                    for (x = 0; x < ret; x++) {
+                        retLen += nodes[x]->nameLen + 1;
+                    }
 
-            char result[retLen];
-            memset(result, '\0', sizeof(result));
-            for (x = 0; x < ret; x++) {
-                strncat(result, (char *)nodes[x] -> name, nodes[x] -> nameLen);
-                // | is a separator
-                strcat(result, "|");
-            }
+                    char result[retLen];
+                    memset(result, '\0', sizeof(result));
+                    for (x = 0; x < ret; x++) {
+                        strncat(result, (char *)nodes[x] -> name, nodes[x] -> nameLen);
+                        // | is a separator
+                        strcat(result, "|");
+                    }
 
-            driver_output(d->port, (char *)result, retLen - 1);
-            return;
+                    driver_output(d->port, (char *)result, retLen - 1);
+                    return;
+                }
         }
     }
     else if(bufflen == 6 && buff[0] == COMMAND_SET_MODE) {
