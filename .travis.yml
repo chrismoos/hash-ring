@@ -1,4 +1,9 @@
 language: java
 compiler:
   - gcc
+addons:
+  apt:
+    packages:
+      - erlang
+      - erlang-dev
 script: LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(pwd)/build" make test && make clean && make bindings
