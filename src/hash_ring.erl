@@ -212,7 +212,7 @@ handle_info({Port, {data, Data}}, #state{port = Port, queue = Queue} = State) ->
         <<1:8>> ->
             {error, unknown_error};
         <<Nodes/binary>> ->
-            {ok, binary:split(Nodes, <<"|">>, [global, trim_all])}
+            {ok, binary:split(Nodes, <<"|">>, [global, trim])}
     end,
     {{value, Pid}, QTail} = queue:out(Queue),
     safe_reply(Pid, R),
