@@ -42,7 +42,7 @@ test : lib bindings $(TEST_OBJECTS)
 bindings: erl java python
 
 erl:
-	$(REBAR) compile
+	$(REBAR) compile eunit
 	
 java:
 	cd lib/java && ./gradlew jar
