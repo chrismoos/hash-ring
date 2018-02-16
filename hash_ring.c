@@ -190,8 +190,10 @@ int hash_ring_add_items(hash_ring_t *ring, hash_ring_node_t *node) {
         memcpy(data + node->nameLen, &concat_buf, concat_len);
 
         if(hash_ring_hash(ring, data, concat_len + node->nameLen, &keyInt) == -1) {
+            free(data);
             return HASH_RING_ERR;
         }
+        free(data);
         
         hash_ring_item_t *item = (hash_ring_item_t*)malloc(sizeof(hash_ring_item_t));
         item->node = node;
