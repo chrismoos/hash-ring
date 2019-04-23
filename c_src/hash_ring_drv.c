@@ -24,6 +24,7 @@ typedef int ErlDrvSSizeT;
 #define COMMAND_REMOVE_NODE     0x04
 #define COMMAND_FIND_NODE       0x05
 #define COMMAND_SET_MODE        0x06
+#define COMMAND_FIND_NODES       0x07
 
 #define RETURN_OK 0x00
 #define RETURN_ERR 0x01
@@ -162,6 +163,34 @@ static void hash_ring_drv_output(ErlDrvData handle, char *buff, ErlDrvSizeT buff
                 driver_output(d->port, (char*)node->name, node->nameLen);
                 return;
             }
+        }
+    }
+    else if(bufflen >= 13 && buff[0] == COMMAND_FIND_NODES) {
+        uint32_t index = readUint32((unsigned char*)&buff[1]);
+        uint32_t keyLen = readUint32((unsigned char*)&buff[5]);
+        uint32_t num = readUint32((unsigned char*)&buff[9]);
+
+        if((bufflen - 13) == keyLen && d->numRings > index && d->ring_usage[index] == 1) {
+            hash_ring_node_t *nodes[num];
+            int ret = hash_ring_find_nodes(d->rings[index], (unsigned char*)&buff[13], keyLen, nodes, num);
+            if (ret > 0) {
+                int retLen = 0;
+                    int x;
+                    for (x = 0; x < ret; x++) {
+                        retLen += nodes[x]->nameLen + 1;
+                    }
+
+                    char result[retLen];
+                    memset(result, '\0', sizeof(result));
+                    for (x = 0; x < ret; x++) {
+                        strncat(result, (char *)nodes[x] -> name, nodes[x] -> nameLen);
+                        // | is a separator
+                        strcat(result, "|");
+                    }
+
+                    driver_output(d->port, (char *)result, retLen - 1);
+                    return;
+                }
         }
     }
     else if(bufflen == 6 && buff[0] == COMMAND_SET_MODE) {
